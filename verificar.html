@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-MZ">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Verificar Email - Luvano</title>
+  <link rel="manifest" href="manifest.json"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root{--azul:#1877f2;--azul-light:#e7f0ff;--cinza-bg:#f0f2f5;--cinza-borda:#dde1e7;--texto:#1c1e21;--texto-sec:#65676b;--verde:#2e7d32;--vermelho:#e41e3f;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--cinza-bg);min-height:100vh;display:flex;flex-direction:column;}
+    header{background:var(--azul);padding:0 20px;height:60px;display:flex;align-items:center;}
+    header a{color:#fff;font-size:20px;font-weight:800;text-decoration:none;}
+    .wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:32px 16px;}
+    .card{background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.12);width:100%;max-width:420px;padding:40px;text-align:center;}
+    .icon{font-size:60px;margin-bottom:16px;}
+    h1{font-size:24px;font-weight:800;margin-bottom:8px;}
+    p{color:var(--texto-sec);font-size:15px;margin-bottom:28px;}
+    .otp-row{display:flex;gap:10px;justify-content:center;margin-bottom:24px;}
+    .otp-in{width:54px;height:64px;text-align:center;font-size:28px;font-weight:800;border:2px solid var(--cinza-borda);border-radius:12px;outline:none;transition:border-color .2s;}
+    .otp-in:focus{border-color:var(--azul);}
+    .btn{width:100%;background:var(--azul);color:#fff;border:none;border-radius:10px;padding:15px;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:12px;}
+    .btn:disabled{background:#9fb8e8;}
+    .link-reenvio{color:var(--texto-sec);font-size:14px;}
+    .link-reenvio button{background:none;border:none;color:var(--azul);font-weight:600;cursor:pointer;font-size:14px;}
+    #toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-80px);padding:12px 24px;border-radius:30px;font-size:14px;font-weight:600;z-index:9999;transition:transform .3s;color:#fff;box-shadow:0 4px 16px rgba(0,0,0,.2);}
+    #toast.show{transform:translateX(-50%) translateY(0);}
+  </style>
+</head>
+<body>
+<header><a href="index.html">🛍️ Luvano</a></header>
+<div class="wrap">
+  <div class="card">
+    <div class="icon">📧</div>
+    <h1>Verificar Email</h1>
+    <p>Insira o código de 6 dígitos enviado para o seu email</p>
+    <div class="otp-row" id="otpRow">
+      <input class="otp-in" maxlength="1" oninput="move(this,0)" onkeydown="back(this,0)"/>
+      <input class="otp-in" maxlength="1" oninput="move(this,1)" onkeydown="back(this,1)"/>
+      <input class="otp-in" maxlength="1" oninput="move(this,2)" onkeydown="back(this,2)"/>
+      <input class="otp-in" maxlength="1" oninput="move(this,3)" onkeydown="back(this,3)"/>
+      <input class="otp-in" maxlength="1" oninput="move(this,4)" onkeydown="back(this,4)"/>
+      <input class="otp-in" maxlength="1" oninput="move(this,5)" onkeydown="back(this,5)"/>
+    </div>
+    <button class="btn" onclick="verificar()" id="btnVer">Verificar Código</button>
+    <div class="link-reenvio">Não recebeu? <button onclick="reenviar()" id="btnRe">Reenviar código</button> <span id="cd"></span></div>
+  </div>
+</div>
+<div id="toast"></div>
+<script>
+const SUPABASE_URL='https://SEU_PROJETO.supabase.co';
+const SUPABASE_ANON_KEY='SUA_ANON_KEY_AQUI';
+const {createClient}=supabase;
+const sb=createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+const params=new URLSearchParams(window.location.search);
+const email=params.get('email')||localStorage.getItem('luvano_email')||'';
+let timer;
+
+document.addEventListener('DOMContentLoaded',()=>{iniciarCd();document.querySelectorAll('.otp-in')[0].focus();});
+
+function move(el,i){
+  el.value=el.value.replace(/\D/g,'');
+  if(el.value&&i<5)document.querySelectorAll('.otp-in')[i+1].focus();
+  if(Array.from(document.querySelectorAll('.otp-in')).every(e=>e.value))verificar();
+}
+function back(el,i){if(event.key==='Backspace'&&!el.value&&i>0)document.querySelectorAll('.otp-in')[i-1].focus();}
+
+async function verificar(){
+  const code=Array.from(document.querySelectorAll('.otp-in')).map(e=>e.value).join('');
+  if(code.length!==6){mostrarToast('Insira todos os 6 dígitos','erro');return;}
+  document.getElementById('btnVer').disabled=true;
+  document.getElementById('btnVer').textContent='A verificar...';
+  const {error}=await sb.auth.verifyOtp({email,token:code,type:'signup'});
+  if(error){
+    document.getElementById('btnVer').disabled=false;
+    document.getElementById('btnVer').textContent='Verificar Código';
+    document.querySelectorAll('.otp-in').forEach(e=>{e.value='';e.style.borderColor='var(--vermelho)';});
+    mostrarToast('Código inválido ou expirado','erro');
+    return;
+  }
+  mostrarToast('Email verificado! Bem-vindo ao Luvano 🎉','sucesso');
+  setTimeout(()=>window.location.href='index.html',1500);
+}
+
+async function reenviar(){
+  const {error}=await sb.auth.resend({type:'signup',email});
+  if(error){mostrarToast('Erro ao reenviar','erro');return;}
+  mostrarToast('Novo código enviado!','sucesso');
+  iniciarCd();
+}
+
+function iniciarCd(){
+  clearInterval(timer);let s=60;
+  document.getElementById('btnRe').disabled=true;
+  document.getElementById('btnRe').style.opacity='.5';
+  document.getElementById('cd').textContent=` (${s}s)`;
+  timer=setInterval(()=>{s--;document.getElementById('cd').textContent=s>0?` (${s}s)`:'';
+    if(s<=0){clearInterval(timer);document.getElementById('btnRe').disabled=false;document.getElementById('btnRe').style.opacity='1';}
+  },1000);
+}
+
+function mostrarToast(msg,tipo='info'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.style.background=tipo==='erro'?'#c62828':tipo==='sucesso'?'#2e7d32':'#323232';
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);
+}
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js")
+      .then(r => console.log("[Luvano SW] Registado:", r.scope))
+      .catch(e => console.warn("[Luvano SW] Erro:", e));
+  });
+}
+</script>
+</body>
+</html>

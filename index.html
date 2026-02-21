@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="pt-MZ">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Luvano - Marketplace de Moçambique</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#1877f2" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛍️</text></svg>" />
+  <!-- Supabase JS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    /* ====== RESET & VARIÁVEIS ====== */
+    :root {
+      --azul: #1877f2;
+      --azul-dark: #0d5ec9;
+      --azul-light: #e7f0ff;
+      --verde: #25D366;
+      --cinza-bg: #f0f2f5;
+      --cinza-card: #ffffff;
+      --cinza-borda: #dde1e7;
+      --texto: #1c1e21;
+      --texto-secundario: #65676b;
+      --vermelho: #e41e3f;
+      --amarelo: #f4af00;
+      --sombra: 0 2px 8px rgba(0,0,0,0.10);
+      --radius: 12px;
+      --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: var(--font); background: var(--cinza-bg); color: var(--texto); min-height: 100vh; }
+
+    /* ====== HEADER ====== */
+    header {
+      background: var(--azul);
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 2px 10px rgba(24,119,242,0.4);
+    }
+    .header-inner {
+      max-width: 1400px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 16px; height: 60px; gap: 12px;
+    }
+    .logo {
+      font-size: 24px; font-weight: 800; color: #fff;
+      text-decoration: none; letter-spacing: -1px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .logo span { font-size: 28px; }
+    .search-bar {
+      flex: 1; max-width: 500px;
+      display: flex; align-items: center;
+      background: rgba(255,255,255,0.18); border-radius: 30px;
+      padding: 0 14px; gap: 8px;
+    }
+    .search-bar input {
+      flex: 1; background: none; border: none; outline: none;
+      color: #fff; font-size: 15px; padding: 10px 0;
+    }
+    .search-bar input::placeholder { color: rgba(255,255,255,0.75); }
+    .search-bar svg { color: rgba(255,255,255,0.75); flex-shrink: 0; }
+    .header-actions { display: flex; gap: 8px; align-items: center; }
+    .btn-header {
+      background: rgba(255,255,255,0.18); color: #fff;
+      border: none; border-radius: 8px; padding: 8px 14px;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      display: flex; align-items: center; gap: 6px; text-decoration: none;
+      transition: background 0.2s;
+    }
+    .btn-header:hover { background: rgba(255,255,255,0.28); }
+    .btn-publicar {
+      background: #fff; color: var(--azul);
+      border-radius: 8px; padding: 8px 16px;
+      font-weight: 700; font-size: 14px; border: none;
+      cursor: pointer; text-decoration: none; display: flex;
+      align-items: center; gap: 6px; transition: background 0.2s;
+    }
+    .btn-publicar:hover { background: var(--azul-light); }
+    .notif-dot {
+      width: 8px; height: 8px; background: var(--vermelho);
+      border-radius: 50%; margin-left: 2px;
+    }
+
+    /* ====== CATEGORIAS ====== */
+    .categorias-bar {
+      background: #fff; border-bottom: 1px solid var(--cinza-borda);
+      overflow-x: auto; scrollbar-width: none;
+    }
+    .categorias-bar::-webkit-scrollbar { display: none; }
+    .categorias-inner {
+      max-width: 1400px; margin: 0 auto;
+      display: flex; gap: 4px; padding: 8px 16px;
+    }
+    .cat-btn {
+      white-space: nowrap; padding: 8px 16px;
+      border-radius: 20px; border: 1.5px solid var(--cinza-borda);
+      background: #fff; color: var(--texto-secundario);
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+    }
+    .cat-btn:hover, .cat-btn.ativo {
+      background: var(--azul-light); color: var(--azul);
+      border-color: var(--azul);
+    }
+
+    /* ====== MAIN LAYOUT ====== */
+    .main-layout {
+      max-width: 1400px; margin: 0 auto;
+      display: grid; grid-template-columns: 240px 1fr;
+      gap: 16px; padding: 16px;
+    }
+    @media (max-width: 768px) {
+      .main-layout { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+    }
+
+    /* ====== SIDEBAR ====== */
+    .sidebar { display: flex; flex-direction: column; gap: 8px; }
+    .sidebar-card {
+      background: #fff; border-radius: var(--radius);
+      padding: 16px; box-shadow: var(--sombra);
+    }
+    .sidebar-title {
+      font-size: 18px; font-weight: 700; margin-bottom: 12px;
+      color: var(--texto);
+    }
+    .sidebar-link {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 8px; border-radius: 8px; text-decoration: none;
+      color: var(--texto); font-size: 15px; font-weight: 500;
+      transition: background 0.15s;
+    }
+    .sidebar-link:hover { background: var(--cinza-bg); }
+    .sidebar-link .icon {
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; background: var(--cinza-bg);
+    }
+    .sidebar-link.destaque .icon { background: var(--azul-light); }
+
+    /* ====== FEED / GRID ====== */
+    .feed { flex: 1; }
+    .feed-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .feed-titulo { font-size: 22px; font-weight: 700; }
+    .filtros { display: flex; gap: 8px; }
+    .filtro-btn {
+      padding: 6px 14px; border-radius: 20px;
+      border: 1.5px solid var(--cinza-borda); background: #fff;
+      font-size: 13px; cursor: pointer; transition: all 0.15s;
+    }
+    .filtro-btn:hover { border-color: var(--azul); color: var(--azul); }
+    .produtos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    /* ====== CARD DE PRODUTO ====== */
+    .produto-card {
+      background: #fff; border-radius: var(--radius);
+      box-shadow: var(--sombra); overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer; position: relative;
+    }
+    .produto-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.14);
+    }
+    .produto-img-wrapper {
+      position: relative; overflow: hidden;
+      aspect-ratio: 1; background: var(--cinza-bg);
+    }
+    .produto-img-wrapper img {
+      width: 100%; height: 100%; object-fit: cover;
+      transition: transform 0.3s;
+    }
+    .produto-card:hover .produto-img-wrapper img { transform: scale(1.05); }
+    .foto-count {
+      position: absolute; bottom: 8px; right: 8px;
+      background: rgba(0,0,0,0.65); color: #fff;
+      border-radius: 12px; padding: 3px 8px; font-size: 12px;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .btn-favorito {
+      position: absolute; top: 8px; right: 8px;
+      background: rgba(255,255,255,0.92); border: none;
+      border-radius: 50%; width: 36px; height: 36px;
+      cursor: pointer; font-size: 18px;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.15s;
+    }
+    .btn-favorito:hover { transform: scale(1.15); }
+    .badge-novo {
+      position: absolute; top: 8px; left: 8px;
+      background: var(--azul); color: #fff;
+      border-radius: 6px; padding: 3px 8px; font-size: 11px; font-weight: 700;
+    }
+    .produto-info { padding: 12px; }
+    .produto-nome {
+      font-size: 15px; font-weight: 600; margin-bottom: 4px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .produto-preco {
+      font-size: 18px; font-weight: 800; color: var(--azul);
+      margin-bottom: 6px;
+    }
+    .produto-local {
+      font-size: 12px; color: var(--texto-secundario);
+      display: flex; align-items: center; gap: 4px; margin-bottom: 8px;
+    }
+    .estrelas { display: flex; gap: 2px; margin-bottom: 8px; }
+    .estrela { font-size: 14px; }
+    .produto-acoes { display: flex; gap: 8px; }
+    .btn-comprar {
+      flex: 1; background: var(--azul); color: #fff;
+      border: none; border-radius: 8px; padding: 9px;
+      font-size: 13px; font-weight: 700; cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-comprar:hover { background: var(--azul-dark); }
+    .btn-whatsapp {
+      background: var(--verde); color: #fff;
+      border: none; border-radius: 8px; padding: 9px 12px;
+      font-size: 16px; cursor: pointer; transition: background 0.2s;
+    }
+    .btn-whatsapp:hover { background: #1da951; }
+
+    /* ====== BANNER DESTAQUE ====== */
+    .banner-destaque {
+      background: linear-gradient(135deg, var(--azul) 0%, #0d5ec9 60%, #1a3a8a 100%);
+      border-radius: var(--radius); padding: 28px;
+      color: #fff; margin-bottom: 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      overflow: hidden; position: relative;
+    }
+    .banner-destaque::before {
+      content: '🛍️';
+      position: absolute; right: -10px; top: -10px;
+      font-size: 120px; opacity: 0.12;
+    }
+    .banner-titulo { font-size: 26px; font-weight: 800; margin-bottom: 6px; }
+    .banner-sub { font-size: 15px; opacity: 0.85; margin-bottom: 16px; }
+    .btn-banner {
+      background: #fff; color: var(--azul);
+      border: none; border-radius: 8px; padding: 10px 22px;
+      font-weight: 700; font-size: 15px; cursor: pointer;
+      text-decoration: none; display: inline-block;
+    }
+
+    /* ====== LOADING SKELETON ====== */
+    .skeleton {
+      background: linear-gradient(90deg, #f0f2f5 25%, #e4e6e9 50%, #f0f2f5 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 8px;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* ====== TOAST NOTIFICAÇÃO ====== */
+    #toast {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px);
+      background: #323232; color: #fff; padding: 12px 24px;
+      border-radius: 30px; font-size: 14px; z-index: 9999;
+      transition: transform 0.3s ease; pointer-events: none;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ====== FOOTER ====== */
+    footer {
+      text-align: center; padding: 24px;
+      color: var(--texto-secundario); font-size: 13px;
+      border-top: 1px solid var(--cinza-borda); margin-top: 32px;
+    }
+    footer a { color: var(--azul); text-decoration: none; }
+
+    /* ====== RESPONSIVO MOBILE ====== */
+    @media (max-width: 600px) {
+      .header-inner { padding: 0 12px; }
+      .search-bar { max-width: none; }
+      .main-layout { padding: 12px; }
+      .produtos-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      .banner-titulo { font-size: 18px; }
+      .btn-header span { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ====== HEADER ====== -->
+<header>
+  <div class="header-inner">
+    <a href="index.html" class="logo">
+      <span>🛍️</span> Luvano
+    </a>
+    <div class="search-bar">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input type="text" placeholder="Pesquisar produtos, categorias..." id="searchInput" />
+    </div>
+    <div class="header-actions">
+      <a href="favoritos.html" class="btn-header">❤️ <span>Favoritos</span></a>
+      <a href="notificacoes.html" class="btn-header" id="notifBtn">
+        🔔 <span>Notificações</span><span class="notif-dot" id="notifDot" style="display:none"></span>
+      </a>
+      <a href="publicar.html" class="btn-publicar">+ <span>Publicar</span></a>
+      <a href="perfil.html" class="btn-header" id="btnPerfil">👤 <span>Perfil</span></a>
+    </div>
+  </div>
+</header>
+
+<!-- ====== CATEGORIAS ====== -->
+<div class="categorias-bar">
+  <div class="categorias-inner">
+    <button class="cat-btn ativo" onclick="filtrarCategoria('todos')">🏠 Todos</button>
+    <button class="cat-btn" onclick="filtrarCategoria('electrodomesticos')">📱 Electrónica</button>
+    <button class="cat-btn" onclick="filtrarCategoria('veiculos')">🚗 Veículos</button>
+    <button class="cat-btn" onclick="filtrarCategoria('imoveis')">🏡 Imóveis</button>
+    <button class="cat-btn" onclick="filtrarCategoria('moda')">👗 Moda</button>
+    <button class="cat-btn" onclick="filtrarCategoria('moveis')">🪑 Móveis</button>
+    <button class="cat-btn" onclick="filtrarCategoria('alimentacao')">🍎 Alimentação</button>
+    <button class="cat-btn" onclick="filtrarCategoria('servicos')">🔧 Serviços</button>
+    <button class="cat-btn" onclick="filtrarCategoria('animais')">🐾 Animais</button>
+    <button class="cat-btn" onclick="filtrarCategoria('desporto')">⚽ Desporto</button>
+    <button class="cat-btn" onclick="filtrarCategoria('outros')">📦 Outros</button>
+  </div>
+</div>
+
+<!-- ====== MAIN ====== -->
+<div class="main-layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-card">
+      <div class="sidebar-titulo">Marketplace</div>
+      <a href="index.html" class="sidebar-link destaque">
+        <span class="icon">🏠</span> Início
+      </a>
+      <a href="favoritos.html" class="sidebar-link">
+        <span class="icon">❤️</span> Favoritos
+      </a>
+      <a href="compras.html" class="sidebar-link">
+        <span class="icon">📦</span> Minhas Compras
+      </a>
+      <a href="conversas.html" class="sidebar-link">
+        <span class="icon">💬</span> Mensagens
+      </a>
+      <a href="notificacoes.html" class="sidebar-link">
+        <span class="icon">🔔</span> Notificações
+      </a>
+    </div>
+    <div class="sidebar-card">
+      <div class="sidebar-titulo">Vendedor</div>
+      <a href="publicar.html" class="sidebar-link">
+        <span class="icon">➕</span> Publicar Produto
+      </a>
+      <a href="meus-produtos.html" class="sidebar-link">
+        <span class="icon">📋</span> Meus Produtos
+      </a>
+      <a href="vendedor.html" class="sidebar-link">
+        <span class="icon">💼</span> Painel Vendedor
+      </a>
+      <a href="carteira.html" class="sidebar-link">
+        <span class="icon">💳</span> Carteira
+      </a>
+    </div>
+    <div class="sidebar-card">
+      <div class="sidebar-titulo">Conta</div>
+      <a href="perfil.html" class="sidebar-link">
+        <span class="icon">👤</span> Perfil
+      </a>
+      <a href="configuracoes.html" class="sidebar-link">
+        <span class="icon">⚙️</span> Configurações
+      </a>
+      <a href="sobre.html" class="sidebar-link">
+        <span class="icon">ℹ️</span> Sobre o Luvano
+      </a>
+    </div>
+  </aside>
+
+  <!-- FEED PRINCIPAL -->
+  <main class="feed">
+    <!-- Banner -->
+    <div class="banner-destaque">
+      <div>
+        <div class="banner-titulo">Bem-vindo ao Luvano! 🇲🇿</div>
+        <div class="banner-sub">O maior marketplace de Moçambique. Compre e venda com M-Pesa, E-Mola e muito mais.</div>
+        <a href="publicar.html" class="btn-banner">Comece a Vender</a>
+      </div>
+    </div>
+
+    <div class="feed-header">
+      <div class="feed-titulo" id="feedTitulo">Produtos em Destaque</div>
+      <div class="filtros">
+        <select class="filtro-btn" id="ordenar" onchange="recarregarProdutos()">
+          <option value="recentes">Mais Recentes</option>
+          <option value="preco_asc">Preço ↑</option>
+          <option value="preco_desc">Preço ↓</option>
+          <option value="avaliacao">Melhor Avaliados</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Grid de produtos -->
+    <div class="produtos-grid" id="produtosGrid">
+      <!-- Preenchido via JS -->
+    </div>
+
+    <div id="carregarMais" style="text-align:center; margin-top:24px; display:none;">
+      <button onclick="carregarMaisProdutos()" style="background:var(--azul);color:#fff;border:none;border-radius:8px;padding:12px 32px;font-size:15px;font-weight:700;cursor:pointer;">
+        Carregar Mais
+      </button>
+    </div>
+  </main>
+</div>
+
+<footer>
+  <p>© 2024 Luvano Marketplace · <a href="sobre.html">Sobre</a> · <a href="configuracoes.html">Configurações</a> · Moçambique 🇲🇿</p>
+</footer>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ====== CONFIGURAÇÃO SUPABASE ======
+const SUPABASE_URL = 'https://SEU_PROJETO.supabase.co';
+const SUPABASE_ANON_KEY = 'SUA_ANON_KEY_AQUI';
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let categoriaAtual = 'todos';
+let pagina = 0;
+const POR_PAGINA = 12;
+let usuarioLogado = null;
+
+// ====== INICIALIZAÇÃO ======
+document.addEventListener('DOMContentLoaded', async () => {
+  await verificarSessao();
+  await carregarProdutos();
+  verificarNotificacoes();
+  configurarBusca();
+});
+
+// ====== VERIFICAR SESSÃO ======
+async function verificarSessao() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    usuarioLogado = session.user;
+    document.getElementById('btnPerfil').textContent = '👤 Minha Conta';
+  }
+}
+
+// ====== CARREGAR PRODUTOS DO SUPABASE ======
+async function carregarProdutos(reset = true) {
+  if (reset) { pagina = 0; document.getElementById('produtosGrid').innerHTML = ''; }
+  
+  // Mostrar esqueletos de carregamento
+  if (reset) mostrarSkeletons(8);
+
+  let query = sb.from('produtos').select('*').eq('ativo', true);
+  if (categoriaAtual !== 'todos') query = query.eq('categoria', categoriaAtual);
+  
+  const ordenar = document.getElementById('ordenar').value;
+  if (ordenar === 'preco_asc') query = query.order('preco', { ascending: true });
+  else if (ordenar === 'preco_desc') query = query.order('preco', { ascending: false });
+  else query = query.order('criado_em', { ascending: false });
+
+  query = query.range(pagina * POR_PAGINA, (pagina + 1) * POR_PAGINA - 1);
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Erro ao carregar produtos:', error);
+    usarProdutosDemo();
+    return;
+  }
+
+  const grid = document.getElementById('produtosGrid');
+  if (reset) grid.innerHTML = '';
+
+  if (!data || data.length === 0) {
+    if (reset) {
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--texto-secundario)">
+        <div style="font-size:48px;margin-bottom:12px">📦</div>
+        <p>Nenhum produto encontrado nesta categoria</p>
+        <a href="publicar.html" style="color:var(--azul)">Seja o primeiro a publicar!</a>
+      </div>`;
+    }
+    return;
+  }
+
+  data.forEach(p => grid.appendChild(criarCardProduto(p)));
+  document.getElementById('carregarMais').style.display = data.length === POR_PAGINA ? 'block' : 'none';
+}
+
+// ====== PRODUTOS DEMO (fallback sem Supabase) ======
+function usarProdutosDemo() {
+  const demo = [
+    { id: 1, nome: 'iPhone 14 Pro 256GB', preco: 65000, local: 'Maputo, Sommerschield', fotos: ['https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=400&q=80'], avaliacao: 4.8, vendedor_tel: '258841234567', vendedor_nome: 'João Silva', categoria: 'electrodomesticos', total_fotos: 3 },
+    { id: 2, nome: 'Toyota Hilux 2020', preco: 2800000, local: 'Maputo, Matola', fotos: ['https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=400&q=80'], avaliacao: 4.5, vendedor_tel: '258842345678', vendedor_nome: 'Maria Cumbe', categoria: 'veiculos', total_fotos: 8 },
+    { id: 3, nome: 'Sofá 3 Lugares Moderno', preco: 18500, local: 'Beira, Ponta Gêa', fotos: ['https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400&q=80'], avaliacao: 4.2, vendedor_tel: '258843456789', vendedor_nome: 'Pedro Matos', categoria: 'moveis', total_fotos: 4 },
+    { id: 4, nome: 'Vestido Capulana Tradicional', preco: 1200, local: 'Nampula, Centro', fotos: ['https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=400&q=80'], avaliacao: 5.0, vendedor_tel: '258844567890', vendedor_nome: 'Ana Tembe', categoria: 'moda', total_fotos: 5 },
+    { id: 5, nome: 'Apartamento T3 Polana', preco: 45000, local: 'Maputo, Polana', fotos: ['https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400&q=80'], avaliacao: 4.7, vendedor_tel: '258845678901', vendedor_nome: 'Carlos Nhaca', categoria: 'imoveis', total_fotos: 12 },
+    { id: 6, nome: 'Samsung Galaxy S23', preco: 42000, local: 'Maputo, Julius Nyerere', fotos: ['https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=400&q=80'], avaliacao: 4.6, vendedor_tel: '258846789012', vendedor_nome: 'Fátima Dino', categoria: 'electrodomesticos', total_fotos: 2 },
+    { id: 7, nome: 'Mahindra XUV 2022', preco: 1950000, local: 'Tete, Centro', fotos: ['https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=400&q=80'], avaliacao: 4.3, vendedor_tel: '258847890123', vendedor_nome: 'Manuel Bila', categoria: 'veiculos', total_fotos: 6 },
+    { id: 8, nome: 'Geladeira Whirlpool 400L', preco: 28000, local: 'Maputo, Alto Maé', fotos: ['https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=400&q=80'], avaliacao: 4.4, vendedor_tel: '258848901234', vendedor_nome: 'Sónia Langa', categoria: 'electrodomesticos', total_fotos: 3 },
+    { id: 9, nome: 'Bicicleta Mountain Bike', preco: 12500, local: 'Beira, Munhava', fotos: ['https://images.unsplash.com/photo-1576435728678-68d0fbf94e91?w=400&q=80'], avaliacao: 4.1, vendedor_tel: '258849012345', vendedor_nome: 'Rui Macamo', categoria: 'desporto', total_fotos: 4 },
+    { id: 10, nome: 'Camarões Frescos 1kg', preco: 450, local: 'Maputo, Mercado', fotos: ['https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?w=400&q=80'], avaliacao: 4.9, vendedor_tel: '258850123456', vendedor_nome: 'Conceição Macie', categoria: 'alimentacao', total_fotos: 2 },
+    { id: 11, nome: 'Cão Pastor Alemão', preco: 8000, local: 'Maputo, Zimpeto', fotos: ['https://images.unsplash.com/photo-1589941013453-ec89f33b5e95?w=400&q=80'], avaliacao: 4.8, vendedor_tel: '258851234567', vendedor_nome: 'Hélder Zunguze', categoria: 'animais', total_fotos: 7 },
+    { id: 12, nome: 'Serviço de Canalização', preco: 2500, local: 'Maputo, Toda área', fotos: ['https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=400&q=80'], avaliacao: 4.7, vendedor_tel: '258852345678', vendedor_nome: 'Armindo Cossa', categoria: 'servicos', total_fotos: 1 },
+  ];
+  
+  const grid = document.getElementById('produtosGrid');
+  grid.innerHTML = '';
+  demo.forEach(p => grid.appendChild(criarCardProduto(p)));
+}
+
+// ====== CRIAR CARD DE PRODUTO ======
+function criarCardProduto(p) {
+  const card = document.createElement('div');
+  card.className = 'produto-card';
+  
+  const fotos = p.fotos || [];
+  const primeiraFoto = (typeof fotos === 'string' ? JSON.parse(fotos) : fotos)[0] 
+    || 'https://via.placeholder.com/400x400?text=Sem+Foto';
+  const totalFotos = p.total_fotos || (Array.isArray(fotos) ? fotos.length : 1);
+  const avaliacao = p.avaliacao || 4.0;
+  const estrelas = '★'.repeat(Math.floor(avaliacao)) + '☆'.repeat(5 - Math.floor(avaliacao));
+  
+  const tel = (p.vendedor_tel || '258841234567').replace(/\D/g, '');
+  const msgWhatsApp = encodeURIComponent(`Olá! Tenho interesse no produto "${p.nome}" no valor de MT ${Number(p.preco).toLocaleString('pt-MZ')}. Está disponível?`);
+  const linkWhatsApp = `https://wa.me/${tel}?text=${msgWhatsApp}`;
+
+  card.innerHTML = `
+    <div class="produto-img-wrapper" onclick="abrirProduto(${p.id})">
+      <img src="${primeiraFoto}" alt="${p.nome}" loading="lazy" onerror="this.src='https://via.placeholder.com/400x400?text=Luvano'"/>
+      ${totalFotos > 1 ? `<span class="foto-count">📷 ${totalFotos}</span>` : ''}
+      <button class="btn-favorito" onclick="toggleFavorito(event,${p.id})" title="Favoritar">❤️</button>
+      ${p.destaque ? '<span class="badge-novo">✨ Destaque</span>' : ''}
+    </div>
+    <div class="produto-info">
+      <div class="produto-nome" title="${p.nome}">${p.nome}</div>
+      <div class="produto-preco">MT ${Number(p.preco).toLocaleString('pt-MZ')}</div>
+      <div class="produto-local">📍 ${p.local || 'Moçambique'}</div>
+      <div class="estrelas" title="${avaliacao}/5">
+        ${estrelas.split('').map((s, i) => `<span class="estrela" style="color:${s==='★'?'#f4af00':'#ccc'}">${s}</span>`).join('')}
+        <span style="font-size:12px;color:var(--texto-secundario);margin-left:4px">${avaliacao}</span>
+      </div>
+      <div class="produto-acoes">
+        <button class="btn-comprar" onclick="comprar(${p.id})">🛒 Comprar</button>
+        <button class="btn-whatsapp" onclick="abrirWhatsApp('${tel}','${p.nome.replace(/'/g,'').substring(0,40)}',${p.preco})" title="Contactar via WhatsApp">
+          <svg width="18" height="18" fill="white" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.558 4.118 1.534 5.848L.058 24l6.305-1.654A11.93 11.93 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.891 0-3.659-.506-5.181-1.388l-.371-.22-3.745.982.999-3.652-.24-.38A9.938 9.938 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+        </button>
+      </div>
+    </div>
+  `;
+  return card;
+}
+
+// ====== AÇÕES ======
+function abrirProduto(id) {
+  window.location.href = `produto.html?id=${id}`;
+}
+
+function comprar(id) {
+  if (!usuarioLogado) {
+    mostrarToast('Faça login para comprar produtos');
+    setTimeout(() => window.location.href = 'login.html', 1500);
+    return;
+  }
+  window.location.href = `pagamento.html?produto=${id}`;
+}
+
+function abrirWhatsApp(tel, nome, preco) {
+  const msg = encodeURIComponent(`Olá! Vi o produto "${nome}" por MT ${Number(preco).toLocaleString('pt-MZ')} no Luvano e tenho interesse. Está disponível?`);
+  window.open(`https://wa.me/${tel}?text=${msg}`, '_blank');
+}
+
+async function toggleFavorito(event, id) {
+  event.stopPropagation();
+  if (!usuarioLogado) {
+    mostrarToast('Faça login para favoritar produtos');
+    return;
+  }
+  const btn = event.currentTarget;
+  const { data: existe } = await sb.from('favoritos').select().eq('usuario_id', usuarioLogado.id).eq('produto_id', id).single();
+  if (existe) {
+    await sb.from('favoritos').delete().eq('usuario_id', usuarioLogado.id).eq('produto_id', id);
+    btn.textContent = '🤍';
+    mostrarToast('Removido dos favoritos');
+  } else {
+    await sb.from('favoritos').insert({ usuario_id: usuarioLogado.id, produto_id: id });
+    btn.textContent = '❤️';
+    mostrarToast('Adicionado aos favoritos!');
+  }
+}
+
+function filtrarCategoria(cat) {
+  categoriaAtual = cat;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('ativo'));
+  event.currentTarget.classList.add('ativo');
+  document.getElementById('feedTitulo').textContent = cat === 'todos' ? 'Produtos em Destaque' : 'Categoria: ' + cat.charAt(0).toUpperCase() + cat.slice(1);
+  carregarProdutos(true);
+}
+
+function recarregarProdutos() { carregarProdutos(true); }
+
+function carregarMaisProdutos() {
+  pagina++;
+  carregarProdutos(false);
+}
+
+function mostrarSkeletons(n) {
+  const grid = document.getElementById('produtosGrid');
+  grid.innerHTML = Array(n).fill(`
+    <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08)">
+      <div class="skeleton" style="aspect-ratio:1;width:100%"></div>
+      <div style="padding:12px">
+        <div class="skeleton" style="height:18px;width:70%;margin-bottom:8px"></div>
+        <div class="skeleton" style="height:24px;width:50%;margin-bottom:8px"></div>
+        <div class="skeleton" style="height:14px;width:60%;margin-bottom:8px"></div>
+        <div class="skeleton" style="height:36px;width:100%"></div>
+      </div>
+    </div>`).join('');
+}
+
+async function verificarNotificacoes() {
+  if (!usuarioLogado) return;
+  const { count } = await sb.from('notificacoes').select('*', { count: 'exact', head: true }).eq('usuario_id', usuarioLogado.id).eq('visto', false);
+  if (count > 0) document.getElementById('notifDot').style.display = 'inline-block';
+}
+
+function configurarBusca() {
+  let timer;
+  document.getElementById('searchInput').addEventListener('input', (e) => {
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      const q = e.target.value.trim();
+      if (q.length < 2) { carregarProdutos(true); return; }
+      const { data } = await sb.from('produtos').select('*').ilike('nome', `%${q}%`).eq('ativo', true).limit(20);
+      const grid = document.getElementById('produtosGrid');
+      grid.innerHTML = '';
+      if (data && data.length > 0) {
+        data.forEach(p => grid.appendChild(criarCardProduto(p)));
+      } else {
+        // Demo search fallback
+        grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--texto-secundario)"><div style="font-size:48px;margin-bottom:12px">🔍</div><p>Nenhum resultado para "${q}"</p></div>`;
+      }
+    }, 400);
+  });
+}
+
+function mostrarToast(msg, tipo = 'info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = tipo === 'erro' ? '#c62828' : tipo === 'sucesso' ? '#2e7d32' : '#323232';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// Carregar favoritos ao iniciar (marcar corações)
+async function marcarFavoritos() {
+  if (!usuarioLogado) return;
+  const { data } = await sb.from('favoritos').select('produto_id').eq('usuario_id', usuarioLogado.id);
+  // Marcar visualmente se necessário
+}
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js")
+      .then(r => console.log("[Luvano SW] Registado:", r.scope))
+      .catch(e => console.warn("[Luvano SW] Erro:", e));
+  });
+}
+</script>
+</body>
+</html>

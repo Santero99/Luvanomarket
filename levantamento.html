@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="pt-MZ">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Levantamento - Luvano</title>
+  <link rel="manifest" href="manifest.json"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root{--azul:#1877f2;--azul-dark:#0d5ec9;--azul-light:#e7f0ff;--cinza-bg:#f0f2f5;--cinza-borda:#dde1e7;--texto:#1c1e21;--texto-sec:#65676b;--verde:#2e7d32;--vermelho:#e41e3f;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--cinza-bg);min-height:100vh;}
+    header{background:var(--azul);padding:0 20px;height:60px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(24,119,242,.4);}
+    header a.logo{color:#fff;font-size:20px;font-weight:800;text-decoration:none;}
+    .btn-voltar{color:#fff;background:rgba(255,255,255,.2);border:none;border-radius:8px;padding:8px 14px;cursor:pointer;text-decoration:none;font-size:14px;}
+    .container{max-width:580px;margin:0 auto;padding:24px 16px;}
+    .card{background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.1);padding:24px;margin-bottom:16px;}
+    .saldo-banner{background:linear-gradient(135deg,#1877f2,#0d5ec9);color:#fff;border-radius:14px;padding:28px;margin-bottom:20px;text-align:center;position:relative;overflow:hidden;}
+    .saldo-banner::before{content:'💳';position:absolute;right:-10px;top:-10px;font-size:100px;opacity:.1;}
+    .saldo-titulo{font-size:14px;opacity:.85;margin-bottom:6px;}
+    .saldo-val{font-size:42px;font-weight:900;margin-bottom:6px;}
+    .saldo-sub{font-size:13px;opacity:.75;}
+    .section-titulo{font-size:17px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+    .metodos-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;}
+    .metodo-btn{border:2px solid var(--cinza-borda);border-radius:10px;padding:14px 8px;cursor:pointer;text-align:center;transition:all .2s;background:#fff;}
+    .metodo-btn:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.1);}
+    .metodo-btn.sel[data-m="mpesa"]{border-color:#D41B34;background:#fff5f6;}
+    .metodo-btn.sel[data-m="emola"]{border-color:#0094D9;background:#f0f8ff;}
+    .metodo-btn.sel[data-m="mkesh"]{border-color:#F7941D;background:#fff8f0;}
+    .metodo-btn .ic{font-size:26px;margin-bottom:5px;}
+    .metodo-btn .nm{font-size:12px;font-weight:700;}
+    label{display:block;font-size:14px;font-weight:600;margin-bottom:6px;}
+    input{width:100%;padding:13px 14px;border:2px solid var(--cinza-borda);border-radius:10px;font-size:15px;outline:none;transition:border-color .2s;}
+    input:focus{border-color:var(--azul);}
+    .form-group{margin-bottom:16px;}
+    .preco-g{position:relative;}
+    .preco-g .pfx{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-weight:700;color:var(--texto-sec);}
+    .preco-g input{padding-left:46px;}
+    .vals-rapidos{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;}
+    .vr-btn{background:var(--azul-light);color:var(--azul);border:none;border-radius:20px;padding:5px 14px;font-size:13px;font-weight:600;cursor:pointer;transition:background .2s;}
+    .vr-btn:hover{background:#cce0ff;}
+    .taxa-box{background:#f8fafc;border-radius:8px;padding:14px;font-size:13px;color:var(--texto-sec);margin-bottom:16px;display:none;}
+    .taxa-row{display:flex;justify-content:space-between;padding:3px 0;}
+    .taxa-total{font-weight:700;color:var(--texto);border-top:1px solid var(--cinza-borda);margin-top:6px;padding-top:8px;font-size:15px;}
+    .btn-lev{width:100%;background:var(--verde);color:#fff;border:none;border-radius:10px;padding:16px;font-size:17px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .2s;}
+    .btn-lev:hover{background:#1b5e20;}
+    .btn-lev:disabled{background:#a5d6a7;cursor:not-allowed;}
+    .spinner{width:22px;height:22px;border:3px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;display:none;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .hist-item{padding:14px 0;border-bottom:1px solid var(--cinza-borda);display:flex;justify-content:space-between;align-items:center;}
+    .hist-item:last-child{border-bottom:none;}
+    .hist-nm{font-weight:700;font-size:15px;}
+    .hist-meta{font-size:12px;color:var(--texto-sec);margin-top:2px;}
+    .hist-val{font-size:18px;font-weight:800;color:var(--verde);}
+    .badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+    .b-pend{background:#fff3e0;color:#ef6c00;}
+    .b-ok{background:#e8f5e9;color:var(--verde);}
+    .b-rej{background:#ffebee;color:var(--vermelho);}
+    #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:#323232;color:#fff;padding:12px 24px;border-radius:30px;font-size:14px;z-index:9999;transition:transform .3s;}
+    #toast.show{transform:translateX(-50%) translateY(0);}
+  </style>
+</head>
+<body>
+<header>
+  <a class="logo" href="index.html">🛍️ Luvano</a>
+  <a href="vendedor.html" class="btn-voltar">← Painel Vendedor</a>
+</header>
+<div class="container">
+  <div class="saldo-banner">
+    <div class="saldo-titulo">💳 Saldo Disponível para Levantamento</div>
+    <div class="saldo-val">MT <span id="saldo">0,00</span></div>
+    <div class="saldo-sub">Actualizado agora</div>
+  </div>
+
+  <div class="card">
+    <div class="section-titulo">💸 Novo Levantamento</div>
+    <label>Método de Recebimento</label>
+    <div class="metodos-grid">
+      <div class="metodo-btn" data-m="mpesa" onclick="selMet('mpesa',this)">
+        <div class="ic">📱</div>
+        <div class="nm" style="color:#D41B34">M-Pesa</div>
+        <div style="font-size:10px;color:#888;margin-top:2px">Vodacom</div>
+      </div>
+      <div class="metodo-btn" data-m="emola" onclick="selMet('emola',this)">
+        <div class="ic">📲</div>
+        <div class="nm" style="color:#0094D9">E-Mola</div>
+        <div style="font-size:10px;color:#888;margin-top:2px">Movitel</div>
+      </div>
+      <div class="metodo-btn" data-m="mkesh" onclick="selMet('mkesh',this)">
+        <div class="ic">💰</div>
+        <div class="nm" style="color:#F7941D">mKesh</div>
+        <div style="font-size:10px;color:#888;margin-top:2px">Tmcel</div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Número do Telemóvel <span style="color:var(--vermelho)">*</span></label>
+      <input type="tel" id="numero" placeholder="+258 84 123 4567"/>
+    </div>
+    <div class="form-group">
+      <label>Valor a Levantar (MT) <span style="color:var(--vermelho)">*</span></label>
+      <div class="preco-g">
+        <span class="pfx">MT</span>
+        <input type="number" id="valor" placeholder="0.00" min="100" oninput="calcTaxa()"/>
+      </div>
+      <div class="vals-rapidos">
+        <button class="vr-btn" onclick="setVal(500)">MT 500</button>
+        <button class="vr-btn" onclick="setVal(1000)">MT 1.000</button>
+        <button class="vr-btn" onclick="setVal(5000)">MT 5.000</button>
+        <button class="vr-btn" onclick="setVal(10000)">MT 10.000</button>
+        <button class="vr-btn" onclick="setTudo()">Tudo</button>
+      </div>
+    </div>
+
+    <div class="taxa-box" id="taxaBox">
+      <div class="taxa-row"><span>Valor solicitado</span><span id="t1"></span></div>
+      <div class="taxa-row"><span>Taxa de processamento (1%)</span><span id="t2"></span></div>
+      <div class="taxa-row taxa-total"><span>Receberá</span><span id="t3" style="color:var(--verde)"></span></div>
+    </div>
+
+    <button class="btn-lev" onclick="pedirLevantamento()" id="btnLev">
+      💸 Confirmar Levantamento <div class="spinner" id="spin"></div>
+    </button>
+    <p style="text-align:center;font-size:12px;color:var(--texto-sec);margin-top:10px">⏱️ Processamento em até 24 horas úteis após aprovação do admin</p>
+  </div>
+
+  <div class="card">
+    <div class="section-titulo">📋 Histórico de Levantamentos</div>
+    <div id="historico"><div style="text-align:center;padding:24px;color:var(--texto-sec)">A carregar...</div></div>
+  </div>
+</div>
+<div id="toast"></div>
+<script>
+const SUPABASE_URL='https://SEU_PROJETO.supabase.co';
+const SUPABASE_ANON_KEY='SUA_ANON_KEY_AQUI';
+const {createClient}=supabase;
+const sb=createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let usuario=null,saldoDisp=0,metSel=null;
+
+document.addEventListener('DOMContentLoaded',async()=>{
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){window.location.href='login.html';return;}
+  usuario=session.user;
+  await carregarSaldo();
+  await carregarHistorico();
+});
+
+async function carregarSaldo(){
+  const {data}=await sb.from('carteira').select('saldo').eq('usuario_id',usuario.id).single();
+  saldoDisp=data?.saldo||0;
+  document.getElementById('saldo').textContent=Number(saldoDisp).toLocaleString('pt-MZ',{minimumFractionDigits:2});
+}
+
+async function carregarHistorico(){
+  const {data}=await sb.from('levantamentos').select('*').eq('usuario_id',usuario.id).order('data',{ascending:false}).limit(10);
+  const el=document.getElementById('historico');
+  const demo=[
+    {metodo:'mpesa',numero:'258841234567',valor:5000,status:'confirmado',data:new Date(Date.now()-86400000).toISOString()},
+    {metodo:'emola',numero:'258844567890',valor:2500,status:'pendente',data:new Date(Date.now()-3600000).toISOString()},
+  ];
+  const lista=(data&&data.length)?data:demo;
+  if(!lista.length){el.innerHTML='<p style="text-align:center;padding:24px;color:var(--texto-sec)">Nenhum levantamento ainda.</p>';return;}
+  el.innerHTML=lista.map(l=>`
+    <div class="hist-item">
+      <div>
+        <div class="hist-nm">${l.metodo?.toUpperCase()} · ${l.numero}</div>
+        <div class="hist-meta">${new Date(l.data).toLocaleDateString('pt-MZ',{day:'2-digit',month:'short',year:'numeric'})}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
+        <div class="hist-val">MT ${Number(l.valor).toLocaleString('pt-MZ')}</div>
+        <span class="badge ${l.status==='confirmado'?'b-ok':l.status==='rejeitado'?'b-rej':'b-pend'}">${l.status==='confirmado'?'✅ Confirmado':l.status==='rejeitado'?'❌ Rejeitado':'⏳ Pendente'}</span>
+      </div>
+    </div>`).join('');
+}
+
+function selMet(m,el){
+  metSel=m;
+  document.querySelectorAll('.metodo-btn').forEach(b=>b.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function setVal(v){document.getElementById('valor').value=v;calcTaxa();}
+function setTudo(){setVal(Math.floor(saldoDisp));}
+function calcTaxa(){
+  const v=parseFloat(document.getElementById('valor').value)||0;
+  const box=document.getElementById('taxaBox');
+  if(v<=0){box.style.display='none';return;}
+  box.style.display='block';
+  const taxa=v*0.01;
+  const liq=v-taxa;
+  document.getElementById('t1').textContent=`MT ${Number(v).toLocaleString('pt-MZ',{minimumFractionDigits:2})}`;
+  document.getElementById('t2').textContent=`- MT ${Number(taxa).toLocaleString('pt-MZ',{minimumFractionDigits:2})}`;
+  document.getElementById('t3').textContent=`MT ${Number(liq).toLocaleString('pt-MZ',{minimumFractionDigits:2})}`;
+}
+async function pedirLevantamento(){
+  if(!metSel){mostrarToast('Selecione o método de levantamento','erro');return;}
+  const numero=document.getElementById('numero').value.trim();
+  const valor=parseFloat(document.getElementById('valor').value);
+  if(!numero){mostrarToast('Insira o número do telemóvel','erro');return;}
+  if(!valor||valor<100){mostrarToast('Valor mínimo de levantamento: MT 100','erro');return;}
+  if(valor>saldoDisp){mostrarToast('Saldo insuficiente na carteira','erro');return;}
+  document.getElementById('btnLev').disabled=true;
+  document.getElementById('spin').style.display='block';
+  const {error}=await sb.from('levantamentos').insert({usuario_id:usuario.id,valor,metodo:metSel,numero:numero.replace(/\D/g,''),status:'pendente',data:new Date().toISOString()});
+  if(!error){
+    await sb.from('carteira').update({saldo:saldoDisp-valor}).eq('usuario_id',usuario.id);
+  }
+  document.getElementById('btnLev').disabled=false;
+  document.getElementById('spin').style.display='none';
+  if(error){mostrarToast('Erro: '+error.message,'erro');return;}
+  mostrarToast('Pedido enviado com sucesso! Aguarde aprovação ✅','sucesso');
+  document.getElementById('valor').value='';
+  document.getElementById('numero').value='';
+  document.getElementById('taxaBox').style.display='none';
+  await carregarSaldo();
+  await carregarHistorico();
+}
+function mostrarToast(msg,tipo='info'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.style.background=tipo==='erro'?'#c62828':tipo==='sucesso'?'#2e7d32':'#323232';
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);
+}
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js")
+      .then(r => console.log("[Luvano SW] Registado:", r.scope))
+      .catch(e => console.warn("[Luvano SW] Erro:", e));
+  });
+}
+</script>
+</body>
+</html>

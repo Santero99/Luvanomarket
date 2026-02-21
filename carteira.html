@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-MZ">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Carteira - Luvano</title>
+  <link rel="manifest" href="manifest.json"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root{--azul:#1877f2;--azul-light:#e7f0ff;--cinza-bg:#f0f2f5;--cinza-borda:#dde1e7;--texto:#1c1e21;--texto-sec:#65676b;--verde:#2e7d32;--vermelho:#e41e3f;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--cinza-bg);}
+    header{background:var(--azul);padding:0 20px;height:60px;display:flex;align-items:center;justify-content:space-between;}
+    header a.logo{color:#fff;font-size:20px;font-weight:800;text-decoration:none;}
+    .btn-voltar{color:#fff;background:rgba(255,255,255,.2);border:none;border-radius:8px;padding:8px 14px;cursor:pointer;text-decoration:none;font-size:14px;}
+    .container{max-width:640px;margin:0 auto;padding:24px 16px;}
+    .card{background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.1);padding:22px;margin-bottom:16px;}
+    .carteira-hero{background:linear-gradient(135deg,#1877f2,#0d5ec9);color:#fff;border-radius:16px;padding:28px;margin-bottom:20px;position:relative;overflow:hidden;}
+    .carteira-hero::before{content:'💳';position:absolute;right:-10px;top:-10px;font-size:100px;opacity:.1;}
+    .c-label{font-size:14px;opacity:.8;margin-bottom:4px;}
+    .c-val{font-size:42px;font-weight:900;margin-bottom:20px;}
+    .c-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    .c-mini{background:rgba(255,255,255,.15);border-radius:10px;padding:12px;}
+    .c-mini .lbl{font-size:11px;opacity:.75;margin-bottom:3px;}
+    .c-mini .val{font-size:18px;font-weight:800;}
+    .c-btns{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;}
+    .c-btn{padding:10px 18px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;border:none;text-decoration:none;display:flex;align-items:center;gap:6px;}
+    .c-btn-white{background:#fff;color:var(--azul);}
+    .c-btn-out{background:rgba(255,255,255,.2);color:#fff;}
+    .section-titulo{font-size:17px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+    .trans-item{display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid var(--cinza-borda);}
+    .trans-item:last-child{border-bottom:none;}
+    .trans-icon{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;margin-right:10px;}
+    .trans-left{display:flex;align-items:center;}
+    .trans-nm{font-weight:700;font-size:14px;}
+    .trans-meta{font-size:12px;color:var(--texto-sec);margin-top:2px;}
+    .trans-val{font-size:16px;font-weight:800;}
+    .val-plus{color:var(--verde);}
+    .val-minus{color:var(--vermelho);}
+    #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:#323232;color:#fff;padding:12px 24px;border-radius:30px;font-size:14px;z-index:9999;transition:transform .3s;}
+    #toast.show{transform:translateX(-50%) translateY(0);}
+  </style>
+</head>
+<body>
+<header>
+  <a class="logo" href="index.html">🛍️ Luvano</a>
+  <a href="vendedor.html" class="btn-voltar">← Painel</a>
+</header>
+<div class="container">
+  <div class="carteira-hero">
+    <div class="c-label">💳 Saldo Total</div>
+    <div class="c-val">MT <span id="saldoTotal">0,00</span></div>
+    <div class="c-grid">
+      <div class="c-mini"><div class="lbl">Recebido total</div><div class="val">MT <span id="totalRecebido">0</span></div></div>
+      <div class="c-mini"><div class="lbl">Levantado total</div><div class="val">MT <span id="totalLevantado">0</span></div></div>
+    </div>
+    <div class="c-btns">
+      <a href="levantamento.html" class="c-btn c-btn-white">💸 Levantar</a>
+      <a href="vendedor.html" class="c-btn c-btn-out">📊 Painel</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-titulo">📊 Histórico de Transacções</div>
+    <div id="historico"><div style="text-align:center;padding:24px;color:var(--texto-sec)">A carregar...</div></div>
+  </div>
+</div>
+<div id="toast"></div>
+<script>
+const SUPABASE_URL='https://SEU_PROJETO.supabase.co';
+const SUPABASE_ANON_KEY='SUA_ANON_KEY_AQUI';
+const {createClient}=supabase;
+const sb=createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let usuario=null;
+
+document.addEventListener('DOMContentLoaded',async()=>{
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){window.location.href='login.html';return;}
+  usuario=session.user;
+  await carregar();
+});
+
+async function carregar(){
+  const {data:cart}=await sb.from('carteira').select('saldo').eq('usuario_id',usuario.id).single();
+  document.getElementById('saldoTotal').textContent=Number(cart?.saldo||0).toLocaleString('pt-MZ',{minimumFractionDigits:2});
+  const {data:pags}=await sb.from('pagamentos').select('valor_vendedor').eq('vendedor_id',usuario.id).eq('status','confirmado');
+  const totalR=(pags||[]).reduce((s,p)=>s+(p.valor_vendedor||0),0);
+  document.getElementById('totalRecebido').textContent=Number(totalR).toLocaleString('pt-MZ');
+  const {data:levs}=await sb.from('levantamentos').select('valor').eq('usuario_id',usuario.id).eq('status','confirmado');
+  const totalL=(levs||[]).reduce((s,l)=>s+(l.valor||0),0);
+  document.getElementById('totalLevantado').textContent=Number(totalL).toLocaleString('pt-MZ');
+
+  // Combinar transacções
+  const trans=[];
+  (pags||[]).forEach(p=>trans.push({tipo:'entrada',valor:p.valor_vendedor,desc:'Venda confirmada',icon:'💰',bg:'#e8f5e9',data:p.criado_em||new Date().toISOString()}));
+  (levs||[]).forEach(l=>trans.push({tipo:'saida',valor:l.valor,desc:`Levantamento ${l.metodo?.toUpperCase()}`,icon:'💸',bg:'#ffebee',data:l.data||new Date().toISOString()}));
+  trans.sort((a,b)=>new Date(b.data)-new Date(a.data));
+
+  const demo=[
+    {tipo:'entrada',valor:61750,desc:'Venda: iPhone 14 Pro',icon:'💰',bg:'#e8f5e9',data:new Date(Date.now()-86400000).toISOString()},
+    {tipo:'saida',valor:5000,desc:'Levantamento M-Pesa',icon:'💸',bg:'#ffebee',data:new Date(Date.now()-172800000).toISOString()},
+    {tipo:'entrada',valor:17575,desc:'Venda: Sofá 3 Lugares',icon:'💰',bg:'#e8f5e9',data:new Date(Date.now()-259200000).toISOString()},
+  ];
+  const lista=trans.length?trans:demo;
+  document.getElementById('historico').innerHTML=lista.map(t=>`
+    <div class="trans-item">
+      <div class="trans-left">
+        <div class="trans-icon" style="background:${t.bg}">${t.icon}</div>
+        <div><div class="trans-nm">${t.desc}</div><div class="trans-meta">${new Date(t.data).toLocaleDateString('pt-MZ',{day:'2-digit',month:'short',year:'numeric'})}</div></div>
+      </div>
+      <div class="trans-val ${t.tipo==='entrada'?'val-plus':'val-minus'}">${t.tipo==='entrada'?'+':'-'} MT ${Number(t.valor).toLocaleString('pt-MZ')}</div>
+    </div>`).join('');
+}
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js")
+      .then(r => console.log("[Luvano SW] Registado:", r.scope))
+      .catch(e => console.warn("[Luvano SW] Erro:", e));
+  });
+}
+</script>
+</body>
+</html>

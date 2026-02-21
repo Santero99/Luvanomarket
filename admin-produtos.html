@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt-MZ">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Produtos - Admin Luvano</title>
+  <link rel="manifest" href="manifest.json"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root{--azul:#1877f2;--azul-light:#e7f0ff;--cinza-bg:#f0f2f5;--cinza-borda:#dde1e7;--texto:#1c1e21;--texto-sec:#65676b;--verde:#2e7d32;--vermelho:#e41e3f;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--cinza-bg);}
+    header{background:var(--azul);padding:0 20px;height:60px;display:flex;align-items:center;justify-content:space-between;}
+    header a.logo{color:#fff;font-size:20px;font-weight:800;text-decoration:none;}
+    .nav{display:flex;gap:8px;}
+    .nav a{color:rgba(255,255,255,.85);text-decoration:none;font-size:13px;padding:6px 12px;border-radius:6px;background:rgba(255,255,255,.15);}
+    .container{max-width:1100px;margin:0 auto;padding:24px 16px;}
+    .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+    .page-titulo{font-size:22px;font-weight:800;}
+    .busca-bar{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
+    .busca-bar input,.busca-bar select{padding:10px 14px;border:2px solid var(--cinza-borda);border-radius:10px;font-size:14px;outline:none;background:#fff;}
+    .busca-bar input{flex:1;}
+    .busca-bar input:focus{border-color:var(--azul);}
+    .card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.08);overflow:hidden;}
+    table{width:100%;border-collapse:collapse;font-size:13px;}
+    th{text-align:left;padding:12px 14px;color:var(--texto-sec);font-weight:600;border-bottom:2px solid var(--cinza-borda);background:#f8fafc;}
+    td{padding:11px 14px;border-bottom:1px solid var(--cinza-borda);vertical-align:middle;}
+    tr:last-child td{border-bottom:none;}
+    tr:hover td{background:#f8fafc;}
+    .prod-mini{display:flex;align-items:center;gap:10px;}
+    .prod-mini img{width:44px;height:44px;border-radius:8px;object-fit:cover;flex-shrink:0;}
+    .prod-nm{font-weight:700;font-size:13px;}
+    .prod-cat{font-size:11px;color:var(--texto-sec);}
+    .badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+    .b-ok{background:#e8f5e9;color:var(--verde);}
+    .b-off{background:#fff3e0;color:#ef6c00;}
+    .btn-sm{padding:5px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;}
+    .btn-del{background:#ffebee;color:var(--vermelho);}
+    .btn-tog{background:var(--azul-light);color:var(--azul);}
+    .btn-ver{background:#e8f5e9;color:var(--verde);}
+    .acoes{display:flex;gap:5px;}
+    #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:#323232;color:#fff;padding:12px 24px;border-radius:30px;font-size:14px;z-index:9999;transition:transform .3s;}
+    #toast.show{transform:translateX(-50%) translateY(0);}
+  </style>
+</head>
+<body>
+<header>
+  <a class="logo" href="admin.html">🛍️ Luvano Admin</a>
+  <div class="nav">
+    <a href="admin.html">📊 Dashboard</a>
+    <a href="admin-usuarios.html">👥 Utilizadores</a>
+    <a href="admin-pagamentos.html">💳 Pagamentos</a>
+  </div>
+</header>
+<div class="container">
+  <div class="page-header">
+    <div class="page-titulo">📦 Gestão de Produtos</div>
+    <div style="font-size:14px;color:var(--texto-sec)">Total: <strong id="totalCount">-</strong></div>
+  </div>
+  <div class="busca-bar">
+    <input type="text" id="busca" placeholder="🔍 Pesquisar produto..." oninput="filtrar()"/>
+    <select id="filtroStatus" onchange="filtrar()">
+      <option value="">Todos os estados</option>
+      <option value="ativo">✅ Activos</option>
+      <option value="inativo">⏸️ Inactivos</option>
+    </select>
+    <select id="filtroCat" onchange="filtrar()">
+      <option value="">Todas as categorias</option>
+      <option value="electrodomesticos">Electrónica</option>
+      <option value="veiculos">Veículos</option>
+      <option value="imoveis">Imóveis</option>
+      <option value="moda">Moda</option>
+      <option value="moveis">Móveis</option>
+    </select>
+  </div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Produto</th><th>Vendedor</th><th>Preço</th><th>Categoria</th><th>Estado</th><th>Data</th><th>Acções</th></tr></thead>
+      <tbody id="tbody"><tr><td colspan="7" style="text-align:center;padding:32px;color:var(--texto-sec)">A carregar...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+<div id="toast"></div>
+<script>
+const SUPABASE_URL='https://SEU_PROJETO.supabase.co';
+const SUPABASE_ANON_KEY='SUA_ANON_KEY_AQUI';
+const {createClient}=supabase;
+const sb=createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let todos=[];
+const DEMO=[
+  {id:1,nome:'iPhone 14 Pro 256GB',preco:65000,categoria:'electrodomesticos',ativo:true,fotos:'["https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=44&q=80"]',users:{nome:'João Silva'},criado_em:new Date().toISOString()},
+  {id:2,nome:'Toyota Hilux 2020',preco:2800000,categoria:'veiculos',ativo:true,fotos:'["https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=44&q=80"]',users:{nome:'Maria Cumbe'},criado_em:new Date(Date.now()-86400000).toISOString()},
+  {id:3,nome:'Sofá 3 Lugares',preco:18500,categoria:'moveis',ativo:false,fotos:'["https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=44&q=80"]',users:{nome:'Pedro Matos'},criado_em:new Date(Date.now()-172800000).toISOString()},
+];
+
+document.addEventListener('DOMContentLoaded',async()=>{
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){window.location.href='login.html';return;}
+  await carregar();
+});
+
+async function carregar(){
+  const {data}=await sb.from('produtos').select('*,users(nome)').order('criado_em',{ascending:false});
+  todos=(data&&data.length)?data:DEMO;
+  document.getElementById('totalCount').textContent=todos.length;
+  renderizar(todos);
+}
+
+function renderizar(lista){
+  const tb=document.getElementById('tbody');
+  if(!lista.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--texto-sec)">Nenhum produto encontrado</td></tr>';return;}
+  tb.innerHTML=lista.map(p=>{
+    const fotos=typeof p.fotos==='string'?JSON.parse(p.fotos):(p.fotos||[]);
+    return`<tr>
+      <td><div class="prod-mini">
+        <img src="${fotos[0]||'https://via.placeholder.com/44'}" alt="${p.nome}" onerror="this.src='https://via.placeholder.com/44'"/>
+        <div><div class="prod-nm">${p.nome}</div><div class="prod-cat">${p.categoria||'-'}</div></div>
+      </div></td>
+      <td>${p.users?.nome||'-'}</td>
+      <td><strong>MT ${Number(p.preco).toLocaleString('pt-MZ')}</strong></td>
+      <td>${p.categoria||'-'}</td>
+      <td><span class="badge ${p.ativo?'b-ok':'b-off'}">${p.ativo?'✅ Activo':'⏸️ Inactivo'}</span></td>
+      <td>${p.criado_em?new Date(p.criado_em).toLocaleDateString('pt-MZ'):'-'}</td>
+      <td><div class="acoes">
+        <a href="produto.html?id=${p.id}" class="btn-sm btn-ver">👁️</a>
+        <button class="btn-sm btn-tog" onclick="toggle(${p.id},${p.ativo})">${p.ativo?'⏸️':'▶️'}</button>
+        <button class="btn-sm btn-del" onclick="deletar(${p.id})">🗑️</button>
+      </div></td>
+    </tr>`;}).join('');
+}
+
+function filtrar(){
+  const q=document.getElementById('busca').value.toLowerCase();
+  const s=document.getElementById('filtroStatus').value;
+  const c=document.getElementById('filtroCat').value;
+  renderizar(todos.filter(p=>
+    (!q||(p.nome||'').toLowerCase().includes(q))&&
+    (!s||(s==='ativo'?p.ativo:!p.ativo))&&
+    (!c||p.categoria===c)
+  ));
+}
+
+async function toggle(id,atual){
+  await sb.from('produtos').update({ativo:!atual}).eq('id',id);
+  mostrarToast(atual?'Produto desactivado':'Produto activado','sucesso');
+  await carregar();
+}
+
+async function deletar(id){
+  if(!confirm('Eliminar este produto permanentemente?'))return;
+  await sb.from('produtos').delete().eq('id',id);
+  mostrarToast('Produto eliminado','sucesso');
+  todos=todos.filter(p=>p.id!==id);
+  renderizar(todos);
+}
+
+function mostrarToast(msg,tipo='info'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.style.background=tipo==='erro'?'#c62828':tipo==='sucesso'?'#2e7d32':'#323232';
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);
+}
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js")
+      .then(r => console.log("[Luvano SW] Registado:", r.scope))
+      .catch(e => console.warn("[Luvano SW] Erro:", e));
+  });
+}
+</script>
+</body>
+</html>

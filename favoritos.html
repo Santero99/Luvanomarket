@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-MZ">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Favoritos - Luvano</title>
+  <link rel="manifest" href="manifest.json"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root{--azul:#1877f2;--azul-light:#e7f0ff;--cinza-bg:#f0f2f5;--cinza-borda:#dde1e7;--texto:#1c1e21;--texto-sec:#65676b;--verde:#25D366;--vermelho:#e41e3f;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--cinza-bg);}
+    header{background:var(--azul);padding:0 20px;height:60px;display:flex;align-items:center;justify-content:space-between;}
+    header a.logo{color:#fff;font-size:20px;font-weight:800;text-decoration:none;}
+    .btn-h{color:#fff;background:rgba(255,255,255,.2);border:none;border-radius:8px;padding:8px 14px;cursor:pointer;text-decoration:none;font-size:14px;}
+    .container{max-width:1000px;margin:0 auto;padding:24px 16px;}
+    .page-titulo{font-size:22px;font-weight:800;margin-bottom:4px;}
+    .page-sub{color:var(--texto-sec);font-size:14px;margin-bottom:20px;}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;}
+    .card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.1);overflow:hidden;position:relative;transition:transform .2s,box-shadow .2s;cursor:pointer;}
+    .card:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(0,0,0,.14);}
+    .img-wrap{aspect-ratio:1;overflow:hidden;background:var(--cinza-bg);}
+    .img-wrap img{width:100%;height:100%;object-fit:cover;transition:transform .3s;}
+    .card:hover .img-wrap img{transform:scale(1.05);}
+    .btn-remov{position:absolute;top:8px;right:8px;background:rgba(255,255,255,.92);border:none;border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;}
+    .info{padding:12px;}
+    .nm{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;}
+    .pr{font-size:18px;font-weight:900;color:var(--azul);margin-bottom:6px;}
+    .local{font-size:12px;color:var(--texto-sec);margin-bottom:8px;}
+    .acoes{display:flex;gap:8px;}
+    .btn-comprar{flex:1;background:var(--azul);color:#fff;border:none;border-radius:8px;padding:9px;font-size:13px;font-weight:700;cursor:pointer;}
+    .btn-wa{background:var(--verde);color:#fff;border:none;border-radius:8px;padding:9px 12px;font-size:16px;cursor:pointer;}
+    .vazio{text-align:center;padding:80px 24px;color:var(--texto-sec);}
+    .vazio .ic{font-size:72px;margin-bottom:16px;}
+    #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:#323232;color:#fff;padding:12px 24px;border-radius:30px;font-size:14px;z-index:9999;transition:transform .3s;}
+    #toast.show{transform:translateX(-50%) translateY(0);}
+  </style>
+</head>
+<body>
+<header>
+  <a class="logo" href="index.html">🛍️ Luvano</a>
+  <a href="index.html" class="btn-h">🏠 Início</a>
+</header>
+<div class="container">
+  <div class="page-titulo">❤️ Meus Favoritos</div>
+  <div class="page-sub" id="countSub">A carregar...</div>
+  <div class="grid" id="grid"><div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--texto-sec)">A carregar...</div></div>
+</div>
+<div id="toast"></div>
+<script>
+const SUPABASE_URL='https://SEU_PROJETO.supabase.co';
+const SUPABASE_ANON_KEY='SUA_ANON_KEY_AQUI';
+const {createClient}=supabase;
+const sb=createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let usuario=null;
+
+document.addEventListener('DOMContentLoaded',async()=>{
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){window.location.href='login.html?next=favoritos.html';return;}
+  usuario=session.user;
+  await carregar();
+});
+
+async function carregar(){
+  const {data}=await sb.from('favoritos').select('produto_id,produtos(*)').eq('usuario_id',usuario.id);
+  const grid=document.getElementById('grid');
+  const demo=[
+    {produto_id:1,produtos:{id:1,nome:'iPhone 14 Pro 256GB',preco:65000,local:'Maputo',fotos:'["https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=300&q=80"]',vendedor_tel:'258841234567'}},
+    {produto_id:2,produtos:{id:2,nome:'Sofá 3 Lugares',preco:18500,local:'Beira',fotos:'["https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=300&q=80"]',vendedor_tel:'258842345678'}},
+  ];
+  const lista=(data&&data.length)?data:demo;
+  document.getElementById('countSub').textContent=`${lista.length} produto${lista.length!==1?'s':''} guardado${lista.length!==1?'s':''}`;
+  if(!lista.length){grid.innerHTML=`<div class="vazio" style="grid-column:1/-1"><div class="ic">💔</div><p style="font-size:18px;font-weight:700;margin-bottom:8px">Sem favoritos ainda</p><p>Explore produtos e clique em ❤️ para guardar</p><a href="index.html" style="display:inline-block;margin-top:16px;background:var(--azul);color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700">Explorar Produtos</a></div>`;return;}
+  grid.innerHTML='';
+  lista.forEach(f=>{
+    const p=f.produtos;if(!p)return;
+    const fotos=typeof p.fotos==='string'?JSON.parse(p.fotos):(p.fotos||[]);
+    const tel=(p.vendedor_tel||'258841234567').replace(/\D/g,'');
+    const card=document.createElement('div');
+    card.className='card';
+    card.innerHTML=`
+      <div class="img-wrap" onclick="window.location.href='produto.html?id=${p.id}'">
+        <img src="${fotos[0]||'https://via.placeholder.com/300'}" alt="${p.nome}" onerror="this.src='https://via.placeholder.com/300'"/>
+      </div>
+      <button class="btn-remov" onclick="remover(${f.produto_id},this)" title="Remover dos favoritos">❤️</button>
+      <div class="info">
+        <div class="nm">${p.nome}</div>
+        <div class="pr">MT ${Number(p.preco).toLocaleString('pt-MZ')}</div>
+        <div class="local">📍 ${p.local||'Moçambique'}</div>
+        <div class="acoes">
+          <button class="btn-comprar" onclick="window.location.href='pagamento.html?produto=${p.id}'">🛒 Comprar</button>
+          <button class="btn-wa" onclick="abrirWA('${tel}','${p.nome.substring(0,30)}',${p.preco})">
+            <svg width="18" height="18" fill="white" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.558 4.118 1.534 5.848L.058 24l6.305-1.654A11.93 11.93 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.891 0-3.659-.506-5.181-1.388l-.37-.22-3.745.982.999-3.652-.24-.38A9.938 9.938 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+          </button>
+        </div>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+async function remover(id,btn){
+  await sb.from('favoritos').delete().eq('usuario_id',usuario.id).eq('produto_id',id);
+  btn.closest('.card').remove();
+  mostrarToast('Removido dos favoritos');
+}
+
+function abrirWA(tel,nome,preco){
+  const msg=encodeURIComponent(`Olá! Tenho interesse no "${nome}" por MT ${Number(preco).toLocaleString('pt-MZ')} no Luvano. Disponível?`);
+  window.open(`https://wa.me/${tel}?text=${msg}`,'_blank');
+}
+
+function mostrarToast(msg,tipo='info'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.style.background=tipo==='erro'?'#c62828':tipo==='sucesso'?'#2e7d32':'#323232';
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);
+}
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js")
+      .then(r => console.log("[Luvano SW] Registado:", r.scope))
+      .catch(e => console.warn("[Luvano SW] Erro:", e));
+  });
+}
+</script>
+</body>
+</html>

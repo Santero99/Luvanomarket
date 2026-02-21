@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-MZ">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Email Template - Luvano</title>
+  <style>
+    body{margin:0;padding:0;background:#f0f2f5;font-family:'Segoe UI',Arial,sans-serif;}
+    .wrapper{max-width:600px;margin:0 auto;padding:24px 16px;}
+    .card{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.12);}
+    .header{background:linear-gradient(135deg,#1877f2,#0d5ec9);padding:36px 32px;text-align:center;}
+    .logo{color:#fff;font-size:28px;font-weight:900;letter-spacing:-1px;margin-bottom:4px;}
+    .logo span{font-size:32px;}
+    .header-sub{color:rgba(255,255,255,.8);font-size:14px;}
+    .body{padding:36px 32px;}
+    .greeting{font-size:20px;font-weight:700;color:#1c1e21;margin-bottom:12px;}
+    .msg{font-size:15px;color:#65676b;line-height:1.7;margin-bottom:20px;}
+    .otp-box{background:linear-gradient(135deg,#e7f0ff,#f0f6ff);border:2px dashed #1877f2;border-radius:12px;padding:24px;text-align:center;margin:24px 0;}
+    .otp-label{font-size:13px;color:#65676b;margin-bottom:8px;}
+    .otp-code{font-size:44px;font-weight:900;color:#1877f2;letter-spacing:10px;font-family:monospace;}
+    .otp-expiry{font-size:12px;color:#65676b;margin-top:8px;}
+    .btn-cta{display:block;background:#1877f2;color:#fff;text-align:center;padding:16px 32px;border-radius:10px;text-decoration:none;font-size:16px;font-weight:700;margin:20px 0;}
+    .btn-cta:hover{background:#0d5ec9;}
+    .divider{border:none;border-top:1px solid #f0f2f5;margin:24px 0;}
+    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0;}
+    .info-item{background:#f8fafc;border-radius:8px;padding:12px;}
+    .info-label{font-size:11px;color:#65676b;text-transform:uppercase;font-weight:600;margin-bottom:3px;}
+    .info-val{font-size:15px;font-weight:700;color:#1c1e21;}
+    .footer{background:#f8fafc;padding:24px 32px;text-align:center;border-top:1px solid #f0f2f5;}
+    .footer p{font-size:12px;color:#65676b;margin:4px 0;line-height:1.6;}
+    .footer a{color:#1877f2;text-decoration:none;}
+    .social-links{display:flex;justify-content:center;gap:12px;margin:12px 0;}
+    .social-btn{background:#1877f2;color:#fff;padding:6px 14px;border-radius:6px;font-size:12px;text-decoration:none;font-weight:600;}
+    /* Tipos de email */
+    .alert-success{background:#e8f5e9;border-left:4px solid #2e7d32;border-radius:0 8px 8px 0;padding:14px 16px;margin:16px 0;}
+    .alert-warning{background:#fff3e0;border-left:4px solid #ef6c00;border-radius:0 8px 8px 0;padding:14px 16px;margin:16px 0;}
+    .product-row{display:flex;gap:14px;align-items:center;background:#f8fafc;border-radius:10px;padding:14px;}
+    .product-img{width:64px;height:64px;border-radius:8px;object-fit:cover;flex-shrink:0;}
+    .product-nm{font-weight:700;font-size:15px;}
+    .product-pr{font-size:20px;font-weight:900;color:#1877f2;margin-top:3px;}
+  </style>
+</head>
+<body>
+<div class="wrapper">
+  <!-- EXEMPLO 1: Email de Boas-vindas / OTP -->
+  <div class="card" style="margin-bottom:24px">
+    <div class="header">
+      <div class="logo"><span>🛍️</span> Luvano</div>
+      <div class="header-sub">Marketplace de Moçambique</div>
+    </div>
+    <div class="body">
+      <div class="greeting">Olá, João! 👋</div>
+      <div class="msg">Bem-vindo ao <strong>Luvano</strong>, o maior marketplace de Moçambique! Para completar o seu registo, insira o código abaixo:</div>
+      <div class="otp-box">
+        <div class="otp-label">Código de Verificação</div>
+        <div class="otp-code">4 8 2 1 9 3</div>
+        <div class="otp-expiry">⏱️ Válido por 15 minutos</div>
+      </div>
+      <div class="msg" style="font-size:13px">Se não solicitou este código, ignore este email. <a href="#" style="color:#1877f2">Reportar actividade suspeita</a></div>
+      <a href="#" class="btn-cta">✅ Verificar Email</a>
+    </div>
+    <div class="footer">
+      <div class="social-links">
+        <a href="#" class="social-btn">🌐 Luvano.co.mz</a>
+        <a href="#" class="social-btn" style="background:#25D366">💬 WhatsApp</a>
+      </div>
+      <p>© 2024 Luvano · Maputo, Moçambique 🇲🇿</p>
+      <p><a href="#">Cancelar subscrição</a> · <a href="#">Política de Privacidade</a></p>
+    </div>
+  </div>
+
+  <!-- EXEMPLO 2: Confirmação de Compra -->
+  <div class="card" style="margin-bottom:24px">
+    <div class="header">
+      <div class="logo"><span>🛍️</span> Luvano</div>
+      <div class="header-sub">Confirmação de Compra</div>
+    </div>
+    <div class="body">
+      <div class="greeting">Compra Confirmada! 🎉</div>
+      <div class="alert-success">✅ O seu pagamento foi processado com sucesso via M-Pesa</div>
+      <div class="product-row">
+        <img class="product-img" src="https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=64&q=80" alt="iPhone"/>
+        <div>
+          <div class="product-nm">iPhone 14 Pro 256GB</div>
+          <div class="product-pr">MT 65.000</div>
+        </div>
+      </div>
+      <hr class="divider"/>
+      <div class="info-grid">
+        <div class="info-item"><div class="info-label">Referência</div><div class="info-val">LVNABC123</div></div>
+        <div class="info-item"><div class="info-label">Método</div><div class="info-val">M-Pesa</div></div>
+        <div class="info-item"><div class="info-label">Data</div><div class="info-val">15 Jan 2024</div></div>
+        <div class="info-item"><div class="info-label">Estado</div><div class="info-val" style="color:#2e7d32">✅ Confirmado</div></div>
+      </div>
+      <a href="#" class="btn-cta">📦 Ver Minhas Compras</a>
+    </div>
+    <div class="footer">
+      <p>Dúvidas? <a href="https://wa.me/258841234567">Contacte o suporte via WhatsApp</a></p>
+      <p>© 2024 Luvano · Maputo, Moçambique 🇲🇿</p>
+    </div>
+  </div>
+
+  <!-- EXEMPLO 3: Nova Venda para Vendedor -->
+  <div class="card">
+    <div class="header">
+      <div class="logo"><span>🛍️</span> Luvano</div>
+      <div class="header-sub">Nova Venda Confirmada</div>
+    </div>
+    <div class="body">
+      <div class="greeting">Parabéns! Nova venda! 💰</div>
+      <div class="msg">O seu produto foi vendido com sucesso. O valor foi creditado na sua carteira Luvano.</div>
+      <div class="product-row">
+        <img class="product-img" src="https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=64&q=80" alt="iPhone"/>
+        <div>
+          <div class="product-nm">iPhone 14 Pro 256GB</div>
+          <div class="product-pr">MT 63.050 <span style="font-size:13px;font-weight:400;color:#65676b">(após comissão)</span></div>
+        </div>
+      </div>
+      <div class="info-grid">
+        <div class="info-item"><div class="info-label">Valor Bruto</div><div class="info-val">MT 65.000</div></div>
+        <div class="info-item"><div class="info-label">Comissão (3%)</div><div class="info-val" style="color:#e41e3f">- MT 1.950</div></div>
+        <div class="info-item"><div class="info-label">Você Recebe</div><div class="info-val" style="color:#2e7d32">MT 63.050</div></div>
+        <div class="info-item"><div class="info-label">Pagamento</div><div class="info-val">M-Pesa</div></div>
+      </div>
+      <a href="#" class="btn-cta">💳 Ver Carteira</a>
+    </div>
+    <div class="footer">
+      <p>© 2024 Luvano · Maputo, Moçambique 🇲🇿</p>
+    </div>
+  </div>
+</div>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js")
+      .then(r => console.log("[Luvano SW] Registado:", r.scope))
+      .catch(e => console.warn("[Luvano SW] Erro:", e));
+  });
+}
+</script>
+</body>
+</html>

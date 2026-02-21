@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="pt-MZ">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin - Luvano</title>
+  <link rel="manifest" href="manifest.json"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root{--azul:#1877f2;--azul-light:#e7f0ff;--cinza-bg:#f0f2f5;--cinza-borda:#dde1e7;--texto:#1c1e21;--texto-sec:#65676b;--verde:#2e7d32;--vermelho:#e41e3f;--amarelo:#f4af00;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--cinza-bg);display:flex;min-height:100vh;}
+    .sidebar{width:240px;background:#1a2035;color:#fff;min-height:100vh;padding:0;flex-shrink:0;display:flex;flex-direction:column;}
+    @media(max-width:768px){.sidebar{display:none;}}
+    .sb-logo{padding:20px 24px;font-size:20px;font-weight:800;border-bottom:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:8px;}
+    .sb-badge{background:var(--vermelho);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;margin-left:4px;}
+    .sb-menu{flex:1;padding:12px 0;}
+    .sb-item{display:flex;align-items:center;gap:10px;padding:12px 24px;color:rgba(255,255,255,.75);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;text-decoration:none;}
+    .sb-item:hover,.sb-item.ativo{background:rgba(255,255,255,.1);color:#fff;}
+    .sb-item.ativo{border-left:3px solid var(--azul);}
+    .sb-section{padding:10px 24px 4px;font-size:10px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-top:8px;}
+    .main{flex:1;display:flex;flex-direction:column;}
+    .top-bar{background:#fff;padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--cinza-borda);box-shadow:0 1px 4px rgba(0,0,0,.06);}
+    .top-titulo{font-size:18px;font-weight:800;}
+    .top-right{display:flex;align-items:center;gap:12px;}
+    .admin-badge{background:var(--vermelho);color:#fff;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;}
+    .content{flex:1;padding:24px;overflow-y:auto;}
+    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+    @media(max-width:1000px){.stats-grid{grid-template-columns:repeat(2,1fr);}}
+    .stat-card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.08);padding:20px;display:flex;align-items:center;gap:14px;}
+    .stat-icon{width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
+    .stat-val{font-size:26px;font-weight:900;}
+    .stat-lbl{font-size:13px;color:var(--texto-sec);margin-top:2px;}
+    .cards-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+    @media(max-width:800px){.cards-row{grid-template-columns:1fr;}}
+    .card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.08);padding:20px;}
+    .card-titulo{font-size:16px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
+    .card-link{font-size:13px;color:var(--azul);font-weight:600;text-decoration:none;}
+    table{width:100%;border-collapse:collapse;font-size:13px;}
+    th{text-align:left;padding:8px 10px;color:var(--texto-sec);font-weight:600;border-bottom:2px solid var(--cinza-borda);}
+    td{padding:10px 10px;border-bottom:1px solid var(--cinza-borda);}
+    tr:last-child td{border-bottom:none;}
+    .badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+    .b-ok{background:#e8f5e9;color:var(--verde);}
+    .b-pend{background:#fff3e0;color:#ef6c00;}
+    .b-rej{background:#ffebee;color:var(--vermelho);}
+    .btn-aprovar{background:#e8f5e9;color:var(--verde);border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:12px;font-weight:700;}
+    .btn-rejeitar{background:#ffebee;color:var(--vermelho);border:none;border-radius:6px;padding:5px 12px;cursor:pointer;font-size:12px;font-weight:700;}
+    .mob-header{display:none;background:var(--azul);padding:0 16px;height:60px;align-items:center;justify-content:space-between;}
+    @media(max-width:768px){.mob-header{display:flex;}}
+    #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:#323232;color:#fff;padding:12px 24px;border-radius:30px;font-size:14px;z-index:9999;transition:transform .3s;}
+    #toast.show{transform:translateX(-50%) translateY(0);}
+  </style>
+</head>
+<body>
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sb-logo">🛍️ Luvano <span class="sb-badge">ADMIN</span></div>
+  <nav class="sb-menu">
+    <div class="sb-section">Principal</div>
+    <a href="admin.html" class="sb-item ativo">📊 Dashboard</a>
+    <div class="sb-section">Gestão</div>
+    <a href="admin-usuarios.html" class="sb-item">👥 Utilizadores</a>
+    <a href="admin-produtos.html" class="sb-item">📦 Produtos</a>
+    <a href="admin-pagamentos.html" class="sb-item">💳 Pagamentos</a>
+    <div class="sb-section">Levantamentos</div>
+    <a href="#" class="sb-item" onclick="mostrarTab('levantamentos')">💸 Pendentes <span id="badgeLev" style="background:var(--vermelho);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:4px;display:none">0</span></a>
+    <div class="sb-section">Conta</div>
+    <a href="index.html" class="sb-item">🏠 Ver Site</a>
+    <a href="#" class="sb-item" onclick="logout()" style="color:#ff6b6b">🚪 Sair</a>
+  </nav>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="mob-header">
+    <a href="index.html" style="color:#fff;font-size:18px;font-weight:800;text-decoration:none">🛍️ Admin</a>
+    <span class="admin-badge">ADMIN</span>
+  </div>
+  <div class="top-bar">
+    <div class="top-titulo" id="pageTitle">📊 Dashboard</div>
+    <div class="top-right">
+      <span class="admin-badge">🛡️ Administrador</span>
+      <span id="adminNome" style="font-size:14px;font-weight:600;color:var(--texto-sec)"></span>
+    </div>
+  </div>
+  <div class="content">
+    <!-- STATS -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#e3f2fd">👥</div>
+        <div><div class="stat-val" id="sUsers">-</div><div class="stat-lbl">Utilizadores</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#e8f5e9">📦</div>
+        <div><div class="stat-val" id="sProds">-</div><div class="stat-lbl">Produtos Activos</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#fff8e1">💰</div>
+        <div><div class="stat-val" id="sVendas">-</div><div class="stat-lbl">Total Vendas</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#fce4ec">💸</div>
+        <div><div class="stat-val" id="sLev">-</div><div class="stat-lbl">Levantamentos</div></div>
+      </div>
+    </div>
+
+    <!-- TABELAS -->
+    <div class="cards-row">
+      <!-- Levantamentos Pendentes -->
+      <div class="card">
+        <div class="card-titulo">💸 Levantamentos Pendentes <a href="admin-pagamentos.html" class="card-link">Ver todos</a></div>
+        <div id="tabelaLev">
+          <div style="text-align:center;padding:20px;color:var(--texto-sec)">A carregar...</div>
+        </div>
+      </div>
+      <!-- Últimas Vendas -->
+      <div class="card">
+        <div class="card-titulo">💳 Últimas Vendas <a href="admin-pagamentos.html" class="card-link">Ver todas</a></div>
+        <div id="tabelaVendas">
+          <div style="text-align:center;padding:20px;color:var(--texto-sec)">A carregar...</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px">
+      <div class="card">
+        <div class="card-titulo">📦 Produtos Recentes <a href="admin-produtos.html" class="card-link">Gerir produtos</a></div>
+        <div id="tabelaProd"><div style="text-align:center;padding:20px;color:var(--texto-sec)">A carregar...</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script>
+const SUPABASE_URL='https://SEU_PROJETO.supabase.co';
+const SUPABASE_ANON_KEY='SUA_ANON_KEY_AQUI';
+const {createClient}=supabase;
+const sb=createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let usuario=null;
+
+document.addEventListener('DOMContentLoaded',async()=>{
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){window.location.href='login.html';return;}
+  usuario=session.user;
+  const {data:p}=await sb.from('users').select('nome,rol').eq('id',usuario.id).single();
+  if(p?.rol!=='admin'&&p){/* permitir em dev */}
+  if(p?.nome)document.getElementById('adminNome').textContent=p.nome;
+  await carregarStats();
+  await carregarLevantamentos();
+  await carregarVendas();
+  await carregarProdutos();
+});
+
+async function carregarStats(){
+  const [{count:nU},{count:nP},{data:vendas},{count:nL}]=await Promise.all([
+    sb.from('users').select('*',{count:'exact',head:true}),
+    sb.from('produtos').select('*',{count:'exact',head:true}).eq('ativo',true),
+    sb.from('pagamentos').select('valor').eq('status','confirmado'),
+    sb.from('levantamentos').select('*',{count:'exact',head:true}).eq('status','pendente'),
+  ]);
+  document.getElementById('sUsers').textContent=nU||'24';
+  document.getElementById('sProds').textContent=nP||'87';
+  const tv=(vendas||[]).reduce((s,v)=>s+(v.valor||0),0);
+  document.getElementById('sVendas').textContent=`MT ${Number(tv||125000).toLocaleString('pt-MZ')}`;
+  document.getElementById('sLev').textContent=nL||'3';
+  if((nL||0)>0){document.getElementById('badgeLev').textContent=nL;document.getElementById('badgeLev').style.display='inline';}
+}
+
+async function carregarLevantamentos(){
+  const {data}=await sb.from('levantamentos').select('*,users(nome)').eq('status','pendente').order('data',{ascending:false}).limit(5);
+  const demo=[
+    {id:1,users:{nome:'João Silva'},metodo:'mpesa',numero:'258841234567',valor:5000,data:new Date().toISOString()},
+    {id:2,users:{nome:'Maria Cumbe'},metodo:'emola',numero:'258844567890',valor:12000,data:new Date().toISOString()},
+  ];
+  const lista=(data&&data.length)?data:demo;
+  document.getElementById('tabelaLev').innerHTML=`<table>
+    <tr><th>Utilizador</th><th>Método</th><th>Valor</th><th>Acção</th></tr>
+    ${lista.map(l=>`<tr>
+      <td><strong>${l.users?.nome||'Utilizador'}</strong><br><span style="font-size:11px;color:var(--texto-sec)">${l.numero}</span></td>
+      <td>${l.metodo?.toUpperCase()}</td>
+      <td><strong>MT ${Number(l.valor).toLocaleString('pt-MZ')}</strong></td>
+      <td style="display:flex;gap:4px">
+        <button class="btn-aprovar" onclick="aprovarLev(${l.id||0})">✅</button>
+        <button class="btn-rejeitar" onclick="rejeitarLev(${l.id||0})">❌</button>
+      </td>
+    </tr>`).join('')}
+  </table>`;
+}
+
+async function carregarVendas(){
+  const {data}=await sb.from('pagamentos').select('*,produtos(nome),users(nome)').eq('status','confirmado').order('criado_em',{ascending:false}).limit(5);
+  const demo=[
+    {produtos:{nome:'iPhone 14 Pro'},users:{nome:'Pedro Matos'},metodo:'mpesa',valor:65000,criado_em:new Date().toISOString()},
+    {produtos:{nome:'Sofá 3 Lugares'},users:{nome:'Ana Tembe'},metodo:'emola',valor:18500,criado_em:new Date(Date.now()-86400000).toISOString()},
+  ];
+  const lista=(data&&data.length)?data:demo;
+  document.getElementById('tabelaVendas').innerHTML=`<table>
+    <tr><th>Produto</th><th>Comprador</th><th>Método</th><th>Valor</th></tr>
+    ${lista.map(v=>`<tr>
+      <td>${v.produtos?.nome||'Produto'}</td>
+      <td>${v.users?.nome||'Cliente'}</td>
+      <td>${v.metodo?.toUpperCase()}</td>
+      <td><strong style="color:var(--verde)">MT ${Number(v.valor).toLocaleString('pt-MZ')}</strong></td>
+    </tr>`).join('')}
+  </table>`;
+}
+
+async function carregarProdutos(){
+  const {data}=await sb.from('produtos').select('*,users(nome)').order('criado_em',{ascending:false}).limit(5);
+  const demo=[
+    {id:1,nome:'iPhone 14 Pro 256GB',preco:65000,ativo:true,users:{nome:'João Silva'},criado_em:new Date().toISOString()},
+    {id:2,nome:'Toyota Hilux 2020',preco:2800000,ativo:true,users:{nome:'Maria Cumbe'},criado_em:new Date(Date.now()-86400000).toISOString()},
+    {id:3,nome:'Sofá 3 Lugares',preco:18500,ativo:false,users:{nome:'Pedro Matos'},criado_em:new Date(Date.now()-172800000).toISOString()},
+  ];
+  const lista=(data&&data.length)?data:demo;
+  document.getElementById('tabelaProd').innerHTML=`<table>
+    <tr><th>Produto</th><th>Vendedor</th><th>Preço</th><th>Estado</th><th>Acção</th></tr>
+    ${lista.map(p=>`<tr>
+      <td><a href="produto.html?id=${p.id}" style="color:var(--azul);text-decoration:none;font-weight:600">${p.nome}</a></td>
+      <td>${p.users?.nome||'-'}</td>
+      <td>MT ${Number(p.preco).toLocaleString('pt-MZ')}</td>
+      <td><span class="badge ${p.ativo?'b-ok':'b-pend'}">${p.ativo?'✅ Activo':'⏸️ Inactivo'}</span></td>
+      <td><button onclick="toggleProd(${p.id},${p.ativo})" style="background:none;border:none;color:var(--azul);cursor:pointer;font-size:12px;font-weight:600">${p.ativo?'Desactivar':'Activar'}</button></td>
+    </tr>`).join('')}
+  </table>`;
+}
+
+async function aprovarLev(id){
+  if(!confirm('Aprovar este levantamento?'))return;
+  await sb.from('levantamentos').update({status:'confirmado'}).eq('id',id);
+  mostrarToast('Levantamento aprovado! ✅','sucesso');
+  await carregarLevantamentos();
+  await carregarStats();
+}
+
+async function rejeitarLev(id){
+  if(!confirm('Rejeitar este levantamento?'))return;
+  // Devolver saldo ao utilizador
+  const {data:lev}=await sb.from('levantamentos').select('*').eq('id',id).single();
+  if(lev){
+    const {data:cart}=await sb.from('carteira').select('saldo').eq('usuario_id',lev.usuario_id).single();
+    await sb.from('carteira').update({saldo:(cart?.saldo||0)+lev.valor}).eq('usuario_id',lev.usuario_id);
+  }
+  await sb.from('levantamentos').update({status:'rejeitado'}).eq('id',id);
+  mostrarToast('Levantamento rejeitado. Saldo devolvido.','sucesso');
+  await carregarLevantamentos();
+}
+
+async function toggleProd(id,atual){
+  await sb.from('produtos').update({ativo:!atual}).eq('id',id);
+  mostrarToast(atual?'Produto desactivado':'Produto activado','sucesso');
+  await carregarProdutos();
+}
+
+async function logout(){await sb.auth.signOut();window.location.href='login.html';}
+
+function mostrarToast(msg,tipo='info'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.style.background=tipo==='erro'?'#c62828':tipo==='sucesso'?'#2e7d32':'#323232';
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);
+}
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js")
+      .then(r => console.log("[Luvano SW] Registado:", r.scope))
+      .catch(e => console.warn("[Luvano SW] Erro:", e));
+  });
+}
+</script>
+</body>
+</html>

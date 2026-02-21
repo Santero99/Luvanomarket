@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt-MZ">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Editar Perfil - Luvano</title>
+  <link rel="manifest" href="manifest.json"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root{--azul:#1877f2;--azul-light:#e7f0ff;--cinza-bg:#f0f2f5;--cinza-borda:#dde1e7;--texto:#1c1e21;--texto-sec:#65676b;--verde:#2e7d32;--vermelho:#e41e3f;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--cinza-bg);}
+    header{background:var(--azul);padding:0 20px;height:60px;display:flex;align-items:center;justify-content:space-between;}
+    header a.logo{color:#fff;font-size:20px;font-weight:800;text-decoration:none;}
+    .btn-voltar{color:#fff;background:rgba(255,255,255,.2);border:none;border-radius:8px;padding:8px 14px;cursor:pointer;text-decoration:none;font-size:14px;}
+    .container{max-width:540px;margin:0 auto;padding:24px 16px;}
+    .card{background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.1);padding:28px;margin-bottom:16px;}
+    .page-titulo{font-size:22px;font-weight:800;margin-bottom:4px;}
+    .page-sub{color:var(--texto-sec);font-size:14px;margin-bottom:24px;}
+    .avatar-area{display:flex;align-items:center;gap:16px;margin-bottom:24px;padding:16px;background:#f8fafc;border-radius:12px;}
+    .avatar-preview{width:80px;height:80px;border-radius:50%;background:var(--azul-light);display:flex;align-items:center;justify-content:center;font-size:36px;overflow:hidden;flex-shrink:0;border:3px solid var(--cinza-borda);}
+    .avatar-preview img{width:100%;height:100%;object-fit:cover;}
+    .btn-troca-avatar{background:var(--azul);color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;}
+    label{display:block;font-size:14px;font-weight:600;margin-bottom:6px;}
+    input,select,textarea{width:100%;padding:12px 14px;border:2px solid var(--cinza-borda);border-radius:10px;font-size:15px;outline:none;transition:border-color .2s;font-family:inherit;}
+    input:focus,select:focus,textarea:focus{border-color:var(--azul);}
+    .form-group{margin-bottom:16px;}
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+    @media(max-width:500px){.form-row{grid-template-columns:1fr;}}
+    .btn-salvar{width:100%;background:var(--azul);color:#fff;border:none;border-radius:10px;padding:15px;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .2s;}
+    .btn-salvar:hover{background:#0d5ec9;}
+    .btn-salvar:disabled{background:#9fb8e8;cursor:not-allowed;}
+    .spinner{width:20px;height:20px;border:3px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;display:none;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .secao-senha{border-top:2px solid var(--cinza-borda);margin-top:20px;padding-top:20px;}
+    #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:#323232;color:#fff;padding:12px 24px;border-radius:30px;font-size:14px;z-index:9999;transition:transform .3s;}
+    #toast.show{transform:translateX(-50%) translateY(0);}
+    input[type=file]{display:none;}
+  </style>
+</head>
+<body>
+<header>
+  <a class="logo" href="index.html">🛍️ Luvano</a>
+  <a href="perfil.html" class="btn-voltar">← Perfil</a>
+</header>
+<div class="container">
+  <div class="page-titulo">✏️ Editar Perfil</div>
+  <div class="page-sub">Actualize as suas informações pessoais</div>
+
+  <div class="card">
+    <div class="avatar-area">
+      <div class="avatar-preview" id="avatarPreview">👤</div>
+      <div>
+        <div style="font-weight:700;margin-bottom:6px">Foto de Perfil</div>
+        <div style="font-size:13px;color:var(--texto-sec);margin-bottom:10px">JPG ou PNG · Max 2MB</div>
+        <button class="btn-troca-avatar" onclick="document.getElementById('avatarInput').click()">📷 Alterar Foto</button>
+        <input type="file" id="avatarInput" accept="image/*" onchange="previewAvatar(this)"/>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Nome Completo</label>
+      <input type="text" id="nome" placeholder="Seu nome completo"/>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="email" placeholder="seu@email.com" readonly style="background:#f8fafc;color:var(--texto-sec)"/>
+      </div>
+      <div class="form-group">
+        <label>Telemóvel (WhatsApp)</label>
+        <input type="tel" id="telefone" placeholder="+258 84 000 0000"/>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Cidade</label>
+        <select id="cidade">
+          <option value="">Seleccionar...</option>
+          <option value="Maputo">Maputo</option><option value="Matola">Matola</option>
+          <option value="Beira">Beira</option><option value="Nampula">Nampula</option>
+          <option value="Quelimane">Quelimane</option><option value="Tete">Tete</option>
+          <option value="Chimoio">Chimoio</option><option value="Pemba">Pemba</option>
+          <option value="Inhambane">Inhambane</option><option value="Xai-Xai">Xai-Xai</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Tipo de Conta</label>
+        <select id="rol">
+          <option value="cliente">🛒 Cliente</option>
+          <option value="vendedor">🏪 Vendedor</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Biografia / Sobre</label>
+      <textarea id="bio" rows="3" placeholder="Conte um pouco sobre si..."></textarea>
+    </div>
+
+    <button class="btn-salvar" onclick="salvarPerfil()" id="btnSalvar">
+      💾 Guardar Alterações <div class="spinner" id="spin"></div>
+    </button>
+
+    <!-- Alterar Senha -->
+    <div class="secao-senha">
+      <div style="font-size:16px;font-weight:700;margin-bottom:14px">🔑 Alterar Senha</div>
+      <div class="form-group">
+        <label>Nova Senha</label>
+        <input type="password" id="novaSenha" placeholder="Mínimo 6 caracteres"/>
+      </div>
+      <div class="form-group">
+        <label>Confirmar Nova Senha</label>
+        <input type="password" id="confirmaSenha" placeholder="Repita a nova senha"/>
+      </div>
+      <button onclick="alterarSenha()" style="width:100%;background:#fff;color:var(--azul);border:2px solid var(--azul);border-radius:10px;padding:12px;font-size:15px;font-weight:700;cursor:pointer;">
+        🔒 Alterar Senha
+      </button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+<script>
+const SUPABASE_URL='https://SEU_PROJETO.supabase.co';
+const SUPABASE_ANON_KEY='SUA_ANON_KEY_AQUI';
+const {createClient}=supabase;
+const sb=createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let usuario=null,novoAvatarFile=null;
+
+document.addEventListener('DOMContentLoaded',async()=>{
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){window.location.href='login.html';return;}
+  usuario=session.user;
+  document.getElementById('email').value=usuario.email||'';
+  const {data:p}=await sb.from('users').select('*').eq('id',usuario.id).single();
+  if(p){
+    document.getElementById('nome').value=p.nome||'';
+    document.getElementById('telefone').value=p.telefone||'';
+    document.getElementById('cidade').value=p.cidade||'';
+    document.getElementById('rol').value=p.rol||'cliente';
+    document.getElementById('bio').value=p.bio||'';
+    if(p.avatar)document.getElementById('avatarPreview').innerHTML=`<img src="${p.avatar}" alt="Avatar"/>`;
+  }
+});
+
+function previewAvatar(inp){
+  const f=inp.files[0];if(!f)return;
+  novoAvatarFile=f;
+  const r=new FileReader();
+  r.onload=e=>document.getElementById('avatarPreview').innerHTML=`<img src="${e.target.result}" alt="Avatar"/>`;
+  r.readAsDataURL(f);
+}
+
+async function salvarPerfil(){
+  const nome=document.getElementById('nome').value.trim();
+  if(!nome){mostrarToast('Insira o seu nome','erro');return;}
+  document.getElementById('btnSalvar').disabled=true;
+  document.getElementById('spin').style.display='block';
+  let avatarUrl=null;
+  if(novoAvatarFile){
+    const ext=novoAvatarFile.name.split('.').pop();
+    const path=`avatars/${usuario.id}.${ext}`;
+    const {error:upErr}=await sb.storage.from('luvano-fotos').upload(path,novoAvatarFile,{upsert:true});
+    if(!upErr){const {data:u}=sb.storage.from('luvano-fotos').getPublicUrl(path);avatarUrl=u.publicUrl;}
+  }
+  const updates={nome,telefone:document.getElementById('telefone').value.trim(),cidade:document.getElementById('cidade').value,rol:document.getElementById('rol').value,bio:document.getElementById('bio').value.trim()};
+  if(avatarUrl)updates.avatar=avatarUrl;
+  const {error}=await sb.from('users').update(updates).eq('id',usuario.id);
+  document.getElementById('btnSalvar').disabled=false;
+  document.getElementById('spin').style.display='none';
+  if(error){mostrarToast('Erro ao guardar: '+error.message,'erro');return;}
+  mostrarToast('Perfil actualizado com sucesso! ✅','sucesso');
+  setTimeout(()=>window.location.href='perfil.html',1500);
+}
+
+async function alterarSenha(){
+  const nova=document.getElementById('novaSenha').value;
+  const conf=document.getElementById('confirmaSenha').value;
+  if(!nova||nova.length<6){mostrarToast('Senha deve ter mínimo 6 caracteres','erro');return;}
+  if(nova!==conf){mostrarToast('As senhas não coincidem','erro');return;}
+  const {error}=await sb.auth.updateUser({password:nova});
+  if(error){mostrarToast('Erro: '+error.message,'erro');return;}
+  mostrarToast('Senha alterada com sucesso! 🔒','sucesso');
+  document.getElementById('novaSenha').value='';
+  document.getElementById('confirmaSenha').value='';
+}
+
+function mostrarToast(msg,tipo='info'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.style.background=tipo==='erro'?'#c62828':tipo==='sucesso'?'#2e7d32':'#323232';
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);
+}
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js")
+      .then(r => console.log("[Luvano SW] Registado:", r.scope))
+      .catch(e => console.warn("[Luvano SW] Erro:", e));
+  });
+}
+</script>
+</body>
+</html>

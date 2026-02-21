@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-MZ">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Utilizadores - Admin Luvano</title>
+  <link rel="manifest" href="manifest.json"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root{--azul:#1877f2;--azul-light:#e7f0ff;--cinza-bg:#f0f2f5;--cinza-borda:#dde1e7;--texto:#1c1e21;--texto-sec:#65676b;--verde:#2e7d32;--vermelho:#e41e3f;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--cinza-bg);}
+    header{background:var(--azul);padding:0 20px;height:60px;display:flex;align-items:center;justify-content:space-between;}
+    header a.logo{color:#fff;font-size:20px;font-weight:800;text-decoration:none;}
+    .nav{display:flex;gap:8px;}
+    .nav a{color:rgba(255,255,255,.85);text-decoration:none;font-size:13px;padding:6px 12px;border-radius:6px;background:rgba(255,255,255,.15);}
+    .container{max-width:1100px;margin:0 auto;padding:24px 16px;}
+    .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+    .page-titulo{font-size:22px;font-weight:800;}
+    .busca-bar{display:flex;gap:10px;margin-bottom:18px;}
+    .busca-bar input{flex:1;padding:10px 14px;border:2px solid var(--cinza-borda);border-radius:10px;font-size:14px;outline:none;}
+    .busca-bar input:focus{border-color:var(--azul);}
+    .filtro-sel{padding:10px 14px;border:2px solid var(--cinza-borda);border-radius:10px;font-size:14px;outline:none;background:#fff;}
+    .card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.08);overflow:hidden;}
+    table{width:100%;border-collapse:collapse;font-size:14px;}
+    th{text-align:left;padding:12px 16px;color:var(--texto-sec);font-weight:600;border-bottom:2px solid var(--cinza-borda);background:#f8fafc;}
+    td{padding:12px 16px;border-bottom:1px solid var(--cinza-borda);}
+    tr:last-child td{border-bottom:none;}
+    tr:hover td{background:#f8fafc;}
+    .user-info{display:flex;align-items:center;gap:10px;}
+    .user-av{width:38px;height:38px;border-radius:50%;background:var(--azul-light);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;overflow:hidden;}
+    .user-av img{width:100%;height:100%;object-fit:cover;}
+    .user-nm{font-weight:700;font-size:14px;}
+    .user-em{font-size:12px;color:var(--texto-sec);}
+    .badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+    .b-admin{background:#fce4ec;color:#c62828;}
+    .b-vendedor{background:#e8f5e9;color:var(--verde);}
+    .b-cliente{background:var(--azul-light);color:var(--azul);}
+    .acoes{display:flex;gap:6px;}
+    .btn-sm{padding:5px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;}
+    .btn-ban{background:#ffebee;color:var(--vermelho);}
+    .btn-admin{background:#e8f5e9;color:var(--verde);}
+    .btn-ver{background:var(--azul-light);color:var(--azul);}
+    #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:#323232;color:#fff;padding:12px 24px;border-radius:30px;font-size:14px;z-index:9999;transition:transform .3s;}
+    #toast.show{transform:translateX(-50%) translateY(0);}
+  </style>
+</head>
+<body>
+<header>
+  <a class="logo" href="admin.html">🛍️ Luvano Admin</a>
+  <div class="nav">
+    <a href="admin.html">📊 Dashboard</a>
+    <a href="admin-produtos.html">📦 Produtos</a>
+    <a href="admin-pagamentos.html">💳 Pagamentos</a>
+  </div>
+</header>
+<div class="container">
+  <div class="page-header">
+    <div class="page-titulo">👥 Gestão de Utilizadores</div>
+    <div style="font-size:14px;color:var(--texto-sec)">Total: <strong id="totalCount">-</strong></div>
+  </div>
+  <div class="busca-bar">
+    <input type="text" id="busca" placeholder="🔍 Pesquisar por nome ou email..." oninput="filtrar()"/>
+    <select class="filtro-sel" id="filtroRol" onchange="filtrar()">
+      <option value="">Todos os papéis</option>
+      <option value="cliente">🛒 Clientes</option>
+      <option value="vendedor">🏪 Vendedores</option>
+      <option value="admin">🛡️ Admins</option>
+    </select>
+  </div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Utilizador</th><th>Telemóvel</th><th>Papel</th><th>Registado</th><th>Acções</th></tr></thead>
+      <tbody id="tbody"><tr><td colspan="5" style="text-align:center;padding:32px;color:var(--texto-sec)">A carregar...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+<div id="toast"></div>
+<script>
+const SUPABASE_URL='https://SEU_PROJETO.supabase.co';
+const SUPABASE_ANON_KEY='SUA_ANON_KEY_AQUI';
+const {createClient}=supabase;
+const sb=createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let todosUsers=[];
+
+document.addEventListener('DOMContentLoaded',async()=>{
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){window.location.href='login.html';return;}
+  await carregar();
+});
+
+const DEMO_USERS=[
+  {id:'1',nome:'João António Silva',email:'joao@email.com',telefone:'258841234567',rol:'vendedor',criado_em:new Date(Date.now()-7776000000).toISOString(),avatar:null},
+  {id:'2',nome:'Maria Cumbe',email:'maria@email.com',telefone:'258842345678',rol:'cliente',criado_em:new Date(Date.now()-5184000000).toISOString(),avatar:null},
+  {id:'3',nome:'Pedro Matos',email:'pedro@email.com',telefone:'258843456789',rol:'vendedor',criado_em:new Date(Date.now()-2592000000).toISOString(),avatar:null},
+  {id:'4',nome:'Ana Tembe',email:'ana@email.com',telefone:'258844567890',rol:'admin',criado_em:new Date(Date.now()-10368000000).toISOString(),avatar:null},
+  {id:'5',nome:'Carlos Nhaca',email:'carlos@email.com',telefone:'258845678901',rol:'cliente',criado_em:new Date(Date.now()-1728000000).toISOString(),avatar:null},
+];
+
+async function carregar(){
+  const {data}=await sb.from('users').select('*').order('criado_em',{ascending:false});
+  todosUsers=(data&&data.length)?data:DEMO_USERS;
+  document.getElementById('totalCount').textContent=todosUsers.length;
+  renderizar(todosUsers);
+}
+
+function renderizar(lista){
+  const tb=document.getElementById('tbody');
+  if(!lista.length){tb.innerHTML='<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--texto-sec)">Nenhum utilizador encontrado</td></tr>';return;}
+  tb.innerHTML=lista.map(u=>`<tr>
+    <td><div class="user-info">
+      <div class="user-av">${u.avatar?`<img src="${u.avatar}"/>`:'👤'}</div>
+      <div><div class="user-nm">${u.nome||'Sem nome'}</div><div class="user-em">${u.email||'-'}</div></div>
+    </div></td>
+    <td>${u.telefone||'-'}</td>
+    <td><span class="badge ${u.rol==='admin'?'b-admin':u.rol==='vendedor'?'b-vendedor':'b-cliente'}">${u.rol==='admin'?'🛡️ Admin':u.rol==='vendedor'?'🏪 Vendedor':'🛒 Cliente'}</span></td>
+    <td>${u.criado_em?new Date(u.criado_em).toLocaleDateString('pt-MZ'):'-'}</td>
+    <td><div class="acoes">
+      <button class="btn-sm btn-admin" onclick="alterarRol('${u.id}','${u.rol}')">🔄 Papel</button>
+      <button class="btn-sm btn-ban" onclick="banirUser('${u.id}','${u.nome}')">🚫 Banir</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+function filtrar(){
+  const q=document.getElementById('busca').value.toLowerCase();
+  const r=document.getElementById('filtroRol').value;
+  renderizar(todosUsers.filter(u=>
+    (!q||(u.nome||'').toLowerCase().includes(q)||(u.email||'').toLowerCase().includes(q))&&
+    (!r||u.rol===r)
+  ));
+}
+
+async function alterarRol(id,rolAtual){
+  const novo=prompt(`Papel actual: ${rolAtual}\nNovo papel (cliente/vendedor/admin):`);
+  if(!['cliente','vendedor','admin'].includes(novo))return;
+  await sb.from('users').update({rol:novo}).eq('id',id);
+  mostrarToast(`Papel alterado para ${novo} ✅`,'sucesso');
+  await carregar();
+}
+
+async function banirUser(id,nome){
+  if(!confirm(`Banir utilizador ${nome}?`))return;
+  await sb.from('users').update({banido:true}).eq('id',id);
+  mostrarToast(`Utilizador banido`,'sucesso');
+  await carregar();
+}
+
+function mostrarToast(msg,tipo='info'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.style.background=tipo==='erro'?'#c62828':tipo==='sucesso'?'#2e7d32':'#323232';
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);
+}
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js")
+      .then(r => console.log("[Luvano SW] Registado:", r.scope))
+      .catch(e => console.warn("[Luvano SW] Erro:", e));
+  });
+}
+</script>
+</body>
+</html>

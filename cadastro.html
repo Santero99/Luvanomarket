@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="pt-MZ">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cadastro - Luvano</title>
+  <link rel="manifest" href="manifest.json"/>
+  <meta name="theme-color" content="#1877f2"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --azul: #1877f2; --azul-dark: #0d5ec9; --azul-light: #e7f0ff;
+      --cinza-bg: #f0f2f5; --cinza-borda: #dde1e7;
+      --texto: #1c1e21; --texto-sec: #65676b;
+      --vermelho: #e41e3f; --verde: #2e7d32;
+      --radius: 12px; --sombra: 0 4px 20px rgba(0,0,0,0.12);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--cinza-bg);
+      min-height: 100vh; display: flex; flex-direction: column;
+    }
+
+    /* HEADER */
+    header {
+      background: var(--azul); padding: 16px 24px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    header a { color: #fff; text-decoration: none; font-size: 22px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+
+    /* MAIN */
+    .page-wrap {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      padding: 32px 16px;
+    }
+    .card {
+      background: #fff; border-radius: var(--radius);
+      box-shadow: var(--sombra); width: 100%; max-width: 460px; padding: 36px;
+    }
+    .card-titulo { font-size: 26px; font-weight: 800; margin-bottom: 6px; color: var(--texto); }
+    .card-sub { color: var(--texto-sec); font-size: 15px; margin-bottom: 28px; }
+
+    /* FORMULÁRIO */
+    .form-group { margin-bottom: 18px; }
+    label { display: block; font-size: 14px; font-weight: 600; color: var(--texto); margin-bottom: 6px; }
+    input[type=text], input[type=email], input[type=password], input[type=tel] {
+      width: 100%; padding: 13px 16px; border: 2px solid var(--cinza-borda);
+      border-radius: 10px; font-size: 15px; outline: none;
+      transition: border-color 0.2s; background: #fff; color: var(--texto);
+    }
+    input:focus { border-color: var(--azul); }
+    input.erro { border-color: var(--vermelho); }
+    .msg-erro { color: var(--vermelho); font-size: 12px; margin-top: 4px; display: none; }
+    .msg-erro.visible { display: block; }
+
+    /* SENHA FORÇA */
+    .forca-wrapper { margin-top: 6px; }
+    .forca-bar { height: 4px; background: var(--cinza-borda); border-radius: 4px; overflow: hidden; }
+    .forca-fill { height: 100%; width: 0; border-radius: 4px; transition: all 0.3s; }
+    .forca-label { font-size: 11px; color: var(--texto-sec); margin-top: 3px; }
+
+    /* TOGGLE SENHA */
+    .input-senha-wrap { position: relative; }
+    .input-senha-wrap input { padding-right: 48px; }
+    .toggle-senha {
+      position: absolute; right: 14px; top: 50%;
+      transform: translateY(-50%); background: none;
+      border: none; cursor: pointer; font-size: 20px; color: var(--texto-sec);
+    }
+
+    /* CHECKBOX */
+    .checkbox-wrap { display: flex; align-items: flex-start; gap: 10px; }
+    .checkbox-wrap input[type=checkbox] { margin-top: 2px; cursor: pointer; width: 16px; height: 16px; }
+    .checkbox-wrap label { font-size: 13px; font-weight: 400; color: var(--texto-sec); cursor: pointer; }
+    .checkbox-wrap a { color: var(--azul); }
+
+    /* BOTÃO */
+    .btn-primary {
+      width: 100%; background: var(--azul); color: #fff;
+      border: none; border-radius: 10px; padding: 14px;
+      font-size: 16px; font-weight: 700; cursor: pointer;
+      transition: background 0.2s; margin-top: 8px;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-primary:hover { background: var(--azul-dark); }
+    .btn-primary:disabled { background: #9fb8e8; cursor: not-allowed; }
+
+    /* DIVIDER */
+    .divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; }
+    .divider hr { flex: 1; border: none; border-top: 1px solid var(--cinza-borda); }
+    .divider span { color: var(--texto-sec); font-size: 13px; }
+
+    /* GOOGLE BTN */
+    .btn-google {
+      width: 100%; background: #fff; color: var(--texto);
+      border: 2px solid var(--cinza-borda); border-radius: 10px;
+      padding: 13px; font-size: 15px; font-weight: 600;
+      cursor: pointer; display: flex; align-items: center;
+      justify-content: center; gap: 10px; transition: all 0.2s;
+    }
+    .btn-google:hover { border-color: var(--azul); background: var(--azul-light); }
+
+    /* LINK LOGIN */
+    .link-login {
+      text-align: center; margin-top: 20px;
+      font-size: 14px; color: var(--texto-sec);
+    }
+    .link-login a { color: var(--azul); font-weight: 600; text-decoration: none; }
+
+    /* SPINNER */
+    .spinner {
+      width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.4);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin 0.6s linear infinite; display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* TOAST */
+    #toast {
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-80px);
+      padding: 12px 24px; border-radius: 30px; font-size: 14px;
+      font-weight: 600; z-index: 9999; transition: transform 0.3s; color: #fff;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* STEPS */
+    .steps { display: flex; gap: 8px; margin-bottom: 24px; }
+    .step {
+      flex: 1; height: 4px; border-radius: 4px;
+      background: var(--cinza-borda); transition: background 0.3s;
+    }
+    .step.ativo { background: var(--azul); }
+    .step.completo { background: #25a244; }
+
+    /* PERFIL TIPO */
+    .tipo-conta { display: flex; gap: 12px; margin-bottom: 18px; }
+    .tipo-btn {
+      flex: 1; padding: 14px; border: 2px solid var(--cinza-borda);
+      border-radius: 10px; background: #fff; cursor: pointer;
+      text-align: center; transition: all 0.2s;
+    }
+    .tipo-btn.ativo { border-color: var(--azul); background: var(--azul-light); }
+    .tipo-btn .icon { font-size: 28px; margin-bottom: 6px; }
+    .tipo-btn .label { font-size: 13px; font-weight: 600; color: var(--texto); }
+  </style>
+</head>
+<body>
+
+<header>
+  <a href="index.html">🛍️ Luvano</a>
+</header>
+
+<div class="page-wrap">
+  <div class="card">
+    <!-- STEPS INDICADOR -->
+    <div class="steps">
+      <div class="step ativo" id="step1bar"></div>
+      <div class="step" id="step2bar"></div>
+      <div class="step" id="step3bar"></div>
+    </div>
+
+    <!-- PASSO 1: DADOS BÁSICOS -->
+    <div id="passo1">
+      <div class="card-titulo">Criar Conta 🛍️</div>
+      <div class="card-sub">Junte-se ao maior marketplace de Moçambique</div>
+
+      <!-- Tipo de Conta -->
+      <div style="margin-bottom:18px">
+        <label>Tipo de Conta</label>
+        <div class="tipo-conta">
+          <div class="tipo-btn ativo" onclick="selecionarTipo('cliente', this)">
+            <div class="icon">🛒</div>
+            <div class="label">Cliente</div>
+          </div>
+          <div class="tipo-btn" onclick="selecionarTipo('vendedor', this)">
+            <div class="icon">🏪</div>
+            <div class="label">Vendedor</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Nome Completo</label>
+        <input type="text" id="nome" placeholder="Ex: João António Silva" />
+        <div class="msg-erro" id="erroNome">Por favor insira o seu nome completo</div>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="email" placeholder="exemplo@email.com" />
+        <div class="msg-erro" id="erroEmail">Email inválido</div>
+      </div>
+      <div class="form-group">
+        <label>Telemóvel (WhatsApp)</label>
+        <input type="tel" id="telefone" placeholder="+258 84 123 4567" />
+        <div class="msg-erro" id="erroTel">Número de telemóvel inválido</div>
+      </div>
+      <div class="form-group">
+        <label>Senha</label>
+        <div class="input-senha-wrap">
+          <input type="password" id="senha" placeholder="Mínimo 6 caracteres" oninput="verificarForca(this.value)" />
+          <button type="button" class="toggle-senha" onclick="toggleVer('senha', this)">👁️</button>
+        </div>
+        <div class="forca-wrapper">
+          <div class="forca-bar"><div class="forca-fill" id="forca-fill"></div></div>
+          <div class="forca-label" id="forca-label"></div>
+        </div>
+        <div class="msg-erro" id="erroSenha">Senha deve ter mínimo 6 caracteres</div>
+      </div>
+      <div class="form-group">
+        <label>Confirmar Senha</label>
+        <div class="input-senha-wrap">
+          <input type="password" id="confirmarSenha" placeholder="Repita a senha" />
+          <button type="button" class="toggle-senha" onclick="toggleVer('confirmarSenha', this)">👁️</button>
+        </div>
+        <div class="msg-erro" id="erroConfirmar">As senhas não coincidem</div>
+      </div>
+      <div class="form-group">
+        <div class="checkbox-wrap">
+          <input type="checkbox" id="termos" />
+          <label for="termos">Concordo com os <a href="sobre.html">Termos de Uso</a> e <a href="sobre.html">Política de Privacidade</a></label>
+        </div>
+        <div class="msg-erro" id="erroTermos">Deve aceitar os termos para continuar</div>
+      </div>
+
+      <button class="btn-primary" onclick="enviarCadastro()" id="btnCadastrar">
+        Criar Conta <div class="spinner" id="spin1"></div>
+      </button>
+
+      <div class="divider"><hr><span>ou</span><hr></div>
+
+      <button class="btn-google" onclick="loginGoogle()">
+        <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285f4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34a853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#fbbc05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#ea4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Continuar com Google
+      </button>
+
+      <div class="link-login">
+        Já tem conta? <a href="login.html">Iniciar Sessão</a>
+      </div>
+    </div>
+
+    <!-- PASSO 2: VERIFICAÇÃO OTP -->
+    <div id="passo2" style="display:none">
+      <div class="card-titulo">Verificar Email 📧</div>
+      <div class="card-sub">Enviamos um código de 6 dígitos para <strong id="emailMostrar"></strong></div>
+
+      <div style="display:flex; gap:10px; justify-content:center; margin:28px 0;" id="otpInputs">
+        <input type="text" maxlength="1" class="otp-input" oninput="moverOtp(this,0)" onkeydown="backOtp(this,0)" />
+        <input type="text" maxlength="1" class="otp-input" oninput="moverOtp(this,1)" onkeydown="backOtp(this,1)" />
+        <input type="text" maxlength="1" class="otp-input" oninput="moverOtp(this,2)" onkeydown="backOtp(this,2)" />
+        <input type="text" maxlength="1" class="otp-input" oninput="moverOtp(this,3)" onkeydown="backOtp(this,3)" />
+        <input type="text" maxlength="1" class="otp-input" oninput="moverOtp(this,4)" onkeydown="backOtp(this,4)" />
+        <input type="text" maxlength="1" class="otp-input" oninput="moverOtp(this,5)" onkeydown="backOtp(this,5)" />
+      </div>
+
+      <style>
+        .otp-input {
+          width: 52px; height: 60px; text-align: center;
+          font-size: 26px; font-weight: 700; border: 2px solid var(--cinza-borda);
+          border-radius: 12px; outline: none; transition: border-color 0.2s;
+        }
+        .otp-input:focus { border-color: var(--azul); }
+      </style>
+
+      <button class="btn-primary" onclick="verificarOTP()" id="btnVerificar">
+        Verificar Código <div class="spinner" id="spin2"></div>
+      </button>
+
+      <div style="text-align:center; margin-top:16px; font-size:14px; color:var(--texto-sec)">
+        Não recebeu o código? 
+        <button onclick="reenviarCodigo()" id="btnReenviar" style="background:none;border:none;color:var(--azul);font-weight:600;cursor:pointer;font-size:14px">
+          Reenviar
+        </button>
+        <span id="countdown" style="color:var(--texto-sec)"></span>
+      </div>
+    </div>
+
+    <!-- PASSO 3: SUCESSO -->
+    <div id="passo3" style="display:none; text-align:center; padding:20px 0">
+      <div style="font-size:64px; margin-bottom:16px">🎉</div>
+      <div class="card-titulo">Conta Criada!</div>
+      <div class="card-sub" style="margin-bottom:24px">Bem-vindo(a) ao Luvano! A sua conta foi verificada com sucesso.</div>
+      <a href="index.html" class="btn-primary" style="text-decoration:none; display:flex; justify-content:center">
+        Ir para o Marketplace
+      </a>
+      <div style="margin-top:12px">
+        <a href="publicar.html" style="color:var(--azul); font-size:14px; font-weight:600">Publicar meu primeiro produto →</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://SEU_PROJETO.supabase.co';
+const SUPABASE_ANON_KEY = 'SUA_ANON_KEY_AQUI';
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let tipoContaSelecionado = 'cliente';
+let emailCadastro = '';
+let countdownTimer;
+
+// Selecionar tipo de conta
+function selecionarTipo(tipo, el) {
+  tipoContaSelecionado = tipo;
+  document.querySelectorAll('.tipo-btn').forEach(b => b.classList.remove('ativo'));
+  el.classList.add('ativo');
+}
+
+// Toggle ver senha
+function toggleVer(id, btn) {
+  const inp = document.getElementById(id);
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? '👁️' : '🙈';
+}
+
+// Força da senha
+function verificarForca(val) {
+  const fill = document.getElementById('forca-fill');
+  const label = document.getElementById('forca-label');
+  let forca = 0;
+  if (val.length >= 6) forca++;
+  if (val.length >= 10) forca++;
+  if (/[A-Z]/.test(val)) forca++;
+  if (/[0-9]/.test(val)) forca++;
+  if (/[^A-Za-z0-9]/.test(val)) forca++;
+  const pct = (forca / 5) * 100;
+  const cores = ['#e41e3f','#ff6d00','#f4af00','#25a244','#1877f2'];
+  const labels = ['Muito fraca','Fraca','Razoável','Forte','Muito forte'];
+  fill.style.width = pct + '%';
+  fill.style.background = cores[forca - 1] || '#ccc';
+  label.textContent = forca > 0 ? labels[forca - 1] : '';
+  label.style.color = cores[forca - 1] || '#ccc';
+}
+
+// Validar e enviar cadastro
+async function enviarCadastro() {
+  const nome = document.getElementById('nome').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const telefone = document.getElementById('telefone').value.trim();
+  const senha = document.getElementById('senha').value;
+  const confirmar = document.getElementById('confirmarSenha').value;
+  const termos = document.getElementById('termos').checked;
+  let valido = true;
+
+  // Validações
+  if (!nome || nome.split(' ').length < 2) { mostrarErro('erroNome', 'nome'); valido = false; }
+  else limparErro('erroNome', 'nome');
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { mostrarErro('erroEmail', 'email'); valido = false; }
+  else limparErro('erroEmail', 'email');
+
+  if (!telefone) { mostrarErro('erroTel', 'telefone'); valido = false; }
+  else limparErro('erroTel', 'telefone');
+
+  if (!senha || senha.length < 6) { mostrarErro('erroSenha', 'senha'); valido = false; }
+  else limparErro('erroSenha', 'senha');
+
+  if (senha !== confirmar) { mostrarErro('erroConfirmar', 'confirmarSenha'); valido = false; }
+  else limparErro('erroConfirmar', 'confirmarSenha');
+
+  if (!termos) { mostrarErro('erroTermos', 'termos'); valido = false; }
+  else limparErro('erroTermos', 'termos');
+
+  if (!valido) return;
+
+  setLoading(true, 'btnCadastrar', 'spin1');
+
+  // Tentar criar conta no Supabase
+  const { data, error } = await sb.auth.signUp({
+    email,
+    password: senha,
+    options: {
+      data: { nome, telefone, tipo: tipoContaSelecionado },
+      emailRedirectTo: window.location.origin + '/verificar.html'
+    }
+  });
+
+  setLoading(false, 'btnCadastrar', 'spin1');
+
+  if (error) {
+    if (error.message.includes('already registered')) {
+      mostrarToast('Este email já está registado. Tente fazer login.', 'erro');
+    } else {
+      mostrarToast('Erro ao criar conta: ' + error.message, 'erro');
+    }
+    return;
+  }
+
+  // Guardar dados no perfil
+  if (data.user) {
+    await sb.from('users').upsert({
+      id: data.user.id, nome, email, telefone,
+      rol: tipoContaSelecionado, criado_em: new Date().toISOString()
+    });
+    // Criar carteira
+    await sb.from('carteira').insert({ usuario_id: data.user.id, saldo: 0 });
+  }
+
+  emailCadastro = email;
+  document.getElementById('emailMostrar').textContent = email;
+
+  // Ir para passo 2
+  document.getElementById('passo1').style.display = 'none';
+  document.getElementById('passo2').style.display = 'block';
+  document.getElementById('step1bar').classList.replace('ativo', 'completo');
+  document.getElementById('step2bar').classList.add('ativo');
+  iniciarContagem();
+  mostrarToast('Código enviado para o seu email!', 'sucesso');
+}
+
+// Verificar OTP
+async function verificarOTP() {
+  const inputs = document.querySelectorAll('.otp-input');
+  const codigo = Array.from(inputs).map(i => i.value).join('');
+  if (codigo.length !== 6) { mostrarToast('Insira os 6 dígitos do código', 'erro'); return; }
+
+  setLoading(true, 'btnVerificar', 'spin2');
+
+  const { error } = await sb.auth.verifyOtp({
+    email: emailCadastro,
+    token: codigo,
+    type: 'signup'
+  });
+
+  setLoading(false, 'btnVerificar', 'spin2');
+
+  if (error) {
+    mostrarToast('Código inválido ou expirado. Tente reenviar.', 'erro');
+    inputs.forEach(i => { i.value = ''; i.style.borderColor = 'var(--vermelho)'; });
+    return;
+  }
+
+  // Sucesso
+  clearInterval(countdownTimer);
+  document.getElementById('passo2').style.display = 'none';
+  document.getElementById('passo3').style.display = 'block';
+  document.getElementById('step2bar').classList.replace('ativo', 'completo');
+  document.getElementById('step3bar').classList.add('ativo', 'completo');
+}
+
+// OTP inputs: mover foco
+function moverOtp(el, idx) {
+  el.value = el.value.replace(/\D/g, '');
+  if (el.value && idx < 5) {
+    document.querySelectorAll('.otp-input')[idx + 1].focus();
+  }
+  // Auto verificar quando todos preenchidos
+  const vals = Array.from(document.querySelectorAll('.otp-input')).map(i => i.value);
+  if (vals.every(v => v)) verificarOTP();
+}
+
+function backOtp(el, idx) {
+  if (event.key === 'Backspace' && !el.value && idx > 0) {
+    document.querySelectorAll('.otp-input')[idx - 1].focus();
+  }
+}
+
+// Reenviar código
+async function reenviarCodigo() {
+  const { error } = await sb.auth.resend({ type: 'signup', email: emailCadastro });
+  if (error) { mostrarToast('Erro ao reenviar código', 'erro'); return; }
+  mostrarToast('Novo código enviado!', 'sucesso');
+  iniciarContagem();
+}
+
+// Countdown
+function iniciarContagem() {
+  clearInterval(countdownTimer);
+  let seg = 60;
+  document.getElementById('btnReenviar').disabled = true;
+  document.getElementById('btnReenviar').style.opacity = '0.5';
+  const span = document.getElementById('countdown');
+  span.textContent = ` (${seg}s)`;
+  countdownTimer = setInterval(() => {
+    seg--;
+    span.textContent = seg > 0 ? ` (${seg}s)` : '';
+    if (seg <= 0) {
+      clearInterval(countdownTimer);
+      document.getElementById('btnReenviar').disabled = false;
+      document.getElementById('btnReenviar').style.opacity = '1';
+    }
+  }, 1000);
+}
+
+// Login com Google
+async function loginGoogle() {
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin + '/index.html' }
+  });
+  if (error) mostrarToast('Erro ao conectar com Google: ' + error.message, 'erro');
+}
+
+// Helpers
+function mostrarErro(erroId, inputId) {
+  document.getElementById(erroId).classList.add('visible');
+  const inp = document.getElementById(inputId);
+  if (inp) inp.classList.add('erro');
+}
+function limparErro(erroId, inputId) {
+  document.getElementById(erroId).classList.remove('visible');
+  const inp = document.getElementById(inputId);
+  if (inp) inp.classList.remove('erro');
+}
+function setLoading(on, btnId, spinId) {
+  const btn = document.getElementById(btnId);
+  const sp = document.getElementById(spinId);
+  btn.disabled = on;
+  sp.style.display = on ? 'block' : 'none';
+  if (on) btn.textContent = 'A processar...';
+}
+function mostrarToast(msg, tipo = 'info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = tipo === 'erro' ? '#c62828' : tipo === 'sucesso' ? '#2e7d32' : '#323232';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js")
+      .then(r => console.log("[Luvano SW] Registado:", r.scope))
+      .catch(e => console.warn("[Luvano SW] Erro:", e));
+  });
+}
+</script>
+</body>
+</html>

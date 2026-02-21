@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-MZ">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Configurações - Luvano</title>
+  <link rel="manifest" href="manifest.json"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root{--azul:#1877f2;--azul-light:#e7f0ff;--cinza-bg:#f0f2f5;--cinza-borda:#dde1e7;--texto:#1c1e21;--texto-sec:#65676b;--verde:#2e7d32;--vermelho:#e41e3f;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--cinza-bg);}
+    header{background:var(--azul);padding:0 20px;height:60px;display:flex;align-items:center;justify-content:space-between;}
+    header a.logo{color:#fff;font-size:20px;font-weight:800;text-decoration:none;}
+    .btn-voltar{color:#fff;background:rgba(255,255,255,.2);border:none;border-radius:8px;padding:8px 14px;cursor:pointer;text-decoration:none;font-size:14px;}
+    .container{max-width:640px;margin:0 auto;padding:24px 16px;}
+    .page-titulo{font-size:22px;font-weight:800;margin-bottom:4px;}
+    .page-sub{color:var(--texto-sec);font-size:14px;margin-bottom:24px;}
+    .card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:16px;overflow:hidden;}
+    .card-titulo{font-size:15px;font-weight:700;padding:16px 20px;border-bottom:1px solid var(--cinza-borda);display:flex;align-items:center;gap:8px;}
+    .config-item{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--cinza-borda);cursor:pointer;transition:background .15s;}
+    .config-item:last-child{border-bottom:none;}
+    .config-item:hover{background:#f8fafc;}
+    .config-left{display:flex;align-items:center;gap:12px;}
+    .config-icon{font-size:20px;}
+    .config-nm{font-weight:600;font-size:14px;}
+    .config-desc{font-size:12px;color:var(--texto-sec);margin-top:1px;}
+    .config-right{color:var(--texto-sec);font-size:18px;}
+    /* Toggle Switch */
+    .toggle{position:relative;display:inline-block;width:44px;height:24px;}
+    .toggle input{opacity:0;width:0;height:0;}
+    .slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:var(--cinza-borda);border-radius:24px;transition:.3s;}
+    .slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s;}
+    input:checked+.slider{background:var(--azul);}
+    input:checked+.slider:before{transform:translateX(20px);}
+    .btn-danger{width:100%;background:#ffebee;color:var(--vermelho);border:2px solid #ffcdd2;border-radius:10px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;}
+    .btn-danger:hover{background:#ffcdd2;}
+    .versao{text-align:center;padding:20px;color:var(--texto-sec);font-size:13px;}
+    #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:#323232;color:#fff;padding:12px 24px;border-radius:30px;font-size:14px;z-index:9999;transition:transform .3s;}
+    #toast.show{transform:translateX(-50%) translateY(0);}
+  </style>
+</head>
+<body>
+<header>
+  <a class="logo" href="index.html">🛍️ Luvano</a>
+  <a href="perfil.html" class="btn-voltar">← Perfil</a>
+</header>
+<div class="container">
+  <div class="page-titulo">⚙️ Configurações</div>
+  <div class="page-sub">Gerir as suas preferências e privacidade</div>
+
+  <div class="card">
+    <div class="card-titulo">🔔 Notificações</div>
+    <div class="config-item">
+      <div class="config-left"><span class="config-icon">📱</span><div><div class="config-nm">Notificações Push</div><div class="config-desc">Receber alertas no dispositivo</div></div></div>
+      <label class="toggle"><input type="checkbox" id="notifPush" checked onchange="salvarConfig()"/><span class="slider"></span></label>
+    </div>
+    <div class="config-item">
+      <div class="config-left"><span class="config-icon">📧</span><div><div class="config-nm">Notificações por Email</div><div class="config-desc">Alertas de compras e mensagens</div></div></div>
+      <label class="toggle"><input type="checkbox" id="notifEmail" checked onchange="salvarConfig()"/><span class="slider"></span></label>
+    </div>
+    <div class="config-item">
+      <div class="config-left"><span class="config-icon">💬</span><div><div class="config-nm">Notificações de Mensagens</div><div class="config-desc">Novas mensagens de chat</div></div></div>
+      <label class="toggle"><input type="checkbox" id="notifMsg" checked onchange="salvarConfig()"/><span class="slider"></span></label>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-titulo">🔒 Privacidade</div>
+    <div class="config-item" onclick="window.location.href='editar-perfil.html'">
+      <div class="config-left"><span class="config-icon">👤</span><div><div class="config-nm">Editar Perfil</div><div class="config-desc">Nome, foto, telemóvel</div></div></div>
+      <span class="config-right">›</span>
+    </div>
+    <div class="config-item" onclick="window.location.href='editar-perfil.html#senha'">
+      <div class="config-left"><span class="config-icon">🔑</span><div><div class="config-nm">Alterar Senha</div><div class="config-desc">Actualizar a sua senha</div></div></div>
+      <span class="config-right">›</span>
+    </div>
+    <div class="config-item">
+      <div class="config-left"><span class="config-icon">👁️</span><div><div class="config-nm">Perfil Público</div><div class="config-desc">Outros podem ver o seu perfil</div></div></div>
+      <label class="toggle"><input type="checkbox" id="perfilPublico" checked onchange="salvarConfig()"/><span class="slider"></span></label>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-titulo">🛍️ Preferências da Loja</div>
+    <div class="config-item" onclick="window.location.href='sobre.html'">
+      <div class="config-left"><span class="config-icon">ℹ️</span><div><div class="config-nm">Sobre o Luvano</div><div class="config-desc">Termos, privacidade, versão</div></div></div>
+      <span class="config-right">›</span>
+    </div>
+    <div class="config-item" onclick="instalarPWA()">
+      <div class="config-left"><span class="config-icon">📲</span><div><div class="config-nm">Instalar App</div><div class="config-desc">Adicionar à tela inicial</div></div></div>
+      <span class="config-right">›</span>
+    </div>
+    <div class="config-item" onclick="limparCache()">
+      <div class="config-left"><span class="config-icon">🗑️</span><div><div class="config-nm">Limpar Cache</div><div class="config-desc">Libertar espaço de armazenamento</div></div></div>
+      <span class="config-right">›</span>
+    </div>
+  </div>
+
+  <button class="btn-danger" onclick="logout()">🚪 Terminar Sessão</button>
+  <button class="btn-danger" style="margin-top:8px;background:#fff;color:var(--vermelho)" onclick="eliminarConta()">⚠️ Eliminar Conta</button>
+
+  <div class="versao">Luvano v1.0.0 · Moçambique 🇲🇿<br>© 2024 Luvano Marketplace</div>
+</div>
+<div id="toast"></div>
+<script>
+const SUPABASE_URL='https://SEU_PROJETO.supabase.co';
+const SUPABASE_ANON_KEY='SUA_ANON_KEY_AQUI';
+const {createClient}=supabase;
+const sb=createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let deferredPrompt=null;
+
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;});
+
+document.addEventListener('DOMContentLoaded',()=>{
+  // Carregar configs guardadas
+  const cfg=JSON.parse(localStorage.getItem('luvano_config')||'{}');
+  if(cfg.notifPush!==undefined)document.getElementById('notifPush').checked=cfg.notifPush;
+  if(cfg.notifEmail!==undefined)document.getElementById('notifEmail').checked=cfg.notifEmail;
+  if(cfg.notifMsg!==undefined)document.getElementById('notifMsg').checked=cfg.notifMsg;
+  if(cfg.perfilPublico!==undefined)document.getElementById('perfilPublico').checked=cfg.perfilPublico;
+});
+
+function salvarConfig(){
+  const cfg={
+    notifPush:document.getElementById('notifPush').checked,
+    notifEmail:document.getElementById('notifEmail').checked,
+    notifMsg:document.getElementById('notifMsg').checked,
+    perfilPublico:document.getElementById('perfilPublico').checked,
+  };
+  localStorage.setItem('luvano_config',JSON.stringify(cfg));
+  mostrarToast('Configurações guardadas','sucesso');
+}
+
+function instalarPWA(){
+  if(deferredPrompt){deferredPrompt.prompt();deferredPrompt.userChoice.then(r=>{if(r.outcome==='accepted')mostrarToast('App instalada! 🎉','sucesso');deferredPrompt=null;});}
+  else mostrarToast('Use o menu do browser para instalar a app','info');
+}
+
+function limparCache(){
+  if('caches' in window){caches.keys().then(ks=>Promise.all(ks.map(k=>caches.delete(k)))).then(()=>mostrarToast('Cache limpo! ✅','sucesso'));}
+  else mostrarToast('Cache limpo','sucesso');
+}
+
+async function logout(){
+  await sb.auth.signOut();
+  window.location.href='login.html';
+}
+
+async function eliminarConta(){
+  if(!confirm('⚠️ Tem certeza que quer eliminar a sua conta? Esta acção é irreversível.'))return;
+  if(!confirm('Todos os seus dados, produtos e histórico serão eliminados. Confirmar?'))return;
+  const {data:{session}}=await sb.auth.getSession();
+  if(session){
+    await sb.from('users').delete().eq('id',session.user.id);
+    await sb.auth.signOut();
+  }
+  window.location.href='index.html';
+}
+
+function mostrarToast(msg,tipo='info'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.style.background=tipo==='erro'?'#c62828':tipo==='sucesso'?'#2e7d32':'#323232';
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);
+}
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js")
+      .then(r => console.log("[Luvano SW] Registado:", r.scope))
+      .catch(e => console.warn("[Luvano SW] Erro:", e));
+  });
+}
+</script>
+</body>
+</html>

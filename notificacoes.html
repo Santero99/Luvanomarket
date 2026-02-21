@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pt-MZ">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Notificações - Luvano</title>
+  <link rel="manifest" href="manifest.json"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root{--azul:#1877f2;--azul-light:#e7f0ff;--cinza-bg:#f0f2f5;--cinza-borda:#dde1e7;--texto:#1c1e21;--texto-sec:#65676b;--verde:#2e7d32;--vermelho:#e41e3f;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--cinza-bg);}
+    header{background:var(--azul);padding:0 20px;height:60px;display:flex;align-items:center;justify-content:space-between;}
+    header a.logo{color:#fff;font-size:20px;font-weight:800;text-decoration:none;}
+    .btn-h{color:#fff;background:rgba(255,255,255,.2);border:none;border-radius:8px;padding:8px 14px;cursor:pointer;text-decoration:none;font-size:14px;}
+    .container{max-width:680px;margin:0 auto;padding:24px 16px;}
+    .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+    .page-titulo{font-size:22px;font-weight:800;}
+    .btn-limpar{background:none;border:none;color:var(--azul);font-size:14px;font-weight:600;cursor:pointer;}
+    .notif-item{background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.07);padding:14px 16px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start;transition:all .2s;cursor:pointer;}
+    .notif-item:hover{box-shadow:0 4px 12px rgba(0,0,0,.12);transform:translateY(-1px);}
+    .notif-item.nao-visto{border-left:4px solid var(--azul);background:linear-gradient(to right,#f0f6ff,#fff);}
+    .notif-icon{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+    .notif-content{flex:1;}
+    .notif-msg{font-size:14px;font-weight:600;margin-bottom:3px;line-height:1.4;}
+    .notif-time{font-size:12px;color:var(--texto-sec);}
+    .notif-dot{width:10px;height:10px;background:var(--azul);border-radius:50%;flex-shrink:0;margin-top:4px;}
+    .vazio{text-align:center;padding:80px 24px;color:var(--texto-sec);}
+    .badge-count{background:var(--vermelho);color:#fff;border-radius:20px;padding:2px 8px;font-size:12px;font-weight:700;margin-left:8px;}
+    #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:#323232;color:#fff;padding:12px 24px;border-radius:30px;font-size:14px;z-index:9999;transition:transform .3s;}
+    #toast.show{transform:translateX(-50%) translateY(0);}
+  </style>
+</head>
+<body>
+<header>
+  <a class="logo" href="index.html">🛍️ Luvano</a>
+  <a href="index.html" class="btn-h">🏠 Início</a>
+</header>
+<div class="container">
+  <div class="page-header">
+    <div>
+      <span class="page-titulo">🔔 Notificações</span>
+      <span class="badge-count" id="countBadge" style="display:none">0</span>
+    </div>
+    <button class="btn-limpar" onclick="marcarTodas()">✓ Marcar todas como lidas</button>
+  </div>
+  <div id="lista"><div style="text-align:center;padding:40px;color:var(--texto-sec)">A carregar...</div></div>
+</div>
+<div id="toast"></div>
+<script>
+const SUPABASE_URL='https://SEU_PROJETO.supabase.co';
+const SUPABASE_ANON_KEY='SUA_ANON_KEY_AQUI';
+const {createClient}=supabase;
+const sb=createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let usuario=null;
+
+const icones={
+  venda:'💰',mensagem:'💬',levantamento:'💸',sistema:'🔔',
+  produto:'📦',avaliacao:'⭐',pagamento:'✅',default:'🔔'
+};
+const cores={
+  venda:'#e8f5e9',mensagem:'#e3f2fd',levantamento:'#fff3e0',
+  sistema:'#f3e5f5',produto:'#e0f2f1',avaliacao:'#fff8e1',default:'#f0f2f5'
+};
+
+document.addEventListener('DOMContentLoaded',async()=>{
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){window.location.href='login.html';return;}
+  usuario=session.user;
+  await carregar();
+  // Subscrever notificações em tempo real
+  sb.channel('notifs').on('postgres_changes',{event:'INSERT',schema:'public',table:'notificacoes',filter:`usuario_id=eq.${usuario.id}`},p=>{
+    adicionarNotif(p.new);
+  }).subscribe();
+});
+
+async function carregar(){
+  const {data}=await sb.from('notificacoes').select('*').eq('usuario_id',usuario.id).order('data',{ascending:false}).limit(50);
+  const demo=[
+    {id:1,tipo:'venda',mensagem:'Nova venda confirmada: iPhone 14 Pro (MT 65,000)',visto:false,data:new Date(Date.now()-300000).toISOString()},
+    {id:2,tipo:'mensagem',mensagem:'Nova mensagem de Maria Cumbe sobre o seu produto',visto:false,data:new Date(Date.now()-3600000).toISOString()},
+    {id:3,tipo:'pagamento',mensagem:'Pagamento MT 18,500 confirmado via E-Mola',visto:true,data:new Date(Date.now()-86400000).toISOString()},
+    {id:4,tipo:'avaliacao',mensagem:'O seu produto recebeu uma avaliação de 5 estrelas ⭐',visto:true,data:new Date(Date.now()-172800000).toISOString()},
+    {id:5,tipo:'sistema',mensagem:'Bem-vindo ao Luvano! Complete o seu perfil para começar.',visto:true,data:new Date(Date.now()-604800000).toISOString()},
+  ];
+  const lista=(data&&data.length)?data:demo;
+  const naoVistas=lista.filter(n=>!n.visto).length;
+  const badge=document.getElementById('countBadge');
+  if(naoVistas>0){badge.textContent=naoVistas;badge.style.display='inline';}
+  renderizar(lista);
+  // Marcar como vistas (após 2s)
+  setTimeout(async()=>{
+    await sb.from('notificacoes').update({visto:true}).eq('usuario_id',usuario.id).eq('visto',false);
+  },2000);
+}
+
+function renderizar(lista){
+  const el=document.getElementById('lista');
+  if(!lista.length){el.innerHTML=`<div class="vazio"><div style="font-size:64px;margin-bottom:12px">🔕</div><p style="font-size:18px;font-weight:700">Sem notificações</p></div>`;return;}
+  el.innerHTML='';
+  lista.forEach(n=>el.appendChild(criarItem(n)));
+}
+
+function criarItem(n){
+  const div=document.createElement('div');
+  div.className=`notif-item${!n.visto?' nao-visto':''}`;
+  div.innerHTML=`
+    <div class="notif-icon" style="background:${cores[n.tipo]||cores.default}">${icones[n.tipo]||icones.default}</div>
+    <div class="notif-content">
+      <div class="notif-msg">${n.mensagem}</div>
+      <div class="notif-time">${tempoRelativo(n.data)}</div>
+    </div>
+    ${!n.visto?'<div class="notif-dot"></div>':''}`;
+  return div;
+}
+
+function adicionarNotif(n){
+  const el=document.getElementById('lista');
+  el.insertBefore(criarItem(n),el.firstChild);
+  const badge=document.getElementById('countBadge');
+  badge.textContent=parseInt(badge.textContent||0)+1;
+  badge.style.display='inline';
+}
+
+async function marcarTodas(){
+  await sb.from('notificacoes').update({visto:true}).eq('usuario_id',usuario.id);
+  document.querySelectorAll('.notif-item.nao-visto').forEach(el=>{el.classList.remove('nao-visto');el.querySelector('.notif-dot')?.remove();});
+  document.getElementById('countBadge').style.display='none';
+  mostrarToast('Todas as notificações marcadas como lidas','sucesso');
+}
+
+function tempoRelativo(data){
+  const diff=Date.now()-new Date(data).getTime();
+  const min=Math.floor(diff/60000),h=Math.floor(diff/3600000),d=Math.floor(diff/86400000);
+  if(min<1)return'Agora mesmo';if(min<60)return`Há ${min} min`;if(h<24)return`Há ${h}h`;if(d<7)return`Há ${d} dia${d!==1?'s':''}`;
+  return new Date(data).toLocaleDateString('pt-MZ');
+}
+
+function mostrarToast(msg,tipo='info'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.style.background=tipo==='sucesso'?'#2e7d32':'#323232';
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);
+}
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js")
+      .then(r => console.log("[Luvano SW] Registado:", r.scope))
+      .catch(e => console.warn("[Luvano SW] Erro:", e));
+  });
+}
+</script>
+</body>
+</html>

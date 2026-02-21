@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="pt-MZ">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pagamento - Luvano</title>
+  <link rel="manifest" href="manifest.json"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --azul: #1877f2; --azul-dark: #0d5ec9; --azul-light: #e7f0ff;
+      --cinza-bg: #f0f2f5; --cinza-borda: #dde1e7; --texto: #1c1e21;
+      --texto-sec: #65676b; --verde: #2e7d32; --vermelho: #e41e3f;
+      --mpesa: #D41B34; --emola: #0094D9; --mkesh: #F7941D; --radius: 12px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--cinza-bg); min-height: 100vh; }
+    header { background: var(--azul); padding: 0 20px; height: 60px; display: flex; align-items: center; justify-content: space-between; }
+    header a.logo { color: #fff; font-size: 20px; font-weight: 800; text-decoration: none; }
+    .btn-voltar { color: #fff; background: rgba(255,255,255,0.2); border: none; border-radius: 8px; padding: 8px 14px; cursor: pointer; text-decoration: none; font-size: 14px; }
+    .container { max-width: 880px; margin: 0 auto; padding: 24px 16px; display: grid; grid-template-columns: 1fr 340px; gap: 20px; }
+    @media (max-width: 700px) { .container { grid-template-columns: 1fr; } }
+    .card { background: #fff; border-radius: var(--radius); box-shadow: 0 2px 12px rgba(0,0,0,0.1); padding: 22px; margin-bottom: 16px; }
+    .section-titulo { font-size: 17px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+    /* MÉTODOS PAGAMENTO */
+    .metodos-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .metodo-card {
+      border: 2px solid var(--cinza-borda); border-radius: 12px; padding: 16px;
+      cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column;
+      align-items: center; gap: 8px; text-align: center;
+    }
+    .metodo-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+    .metodo-card.selecionado { border-color: var(--azul); background: var(--azul-light); }
+    .metodo-icon { font-size: 32px; }
+    .metodo-nome { font-size: 14px; font-weight: 700; }
+    .metodo-desc { font-size: 11px; color: var(--texto-sec); }
+    .metodo-card[data-m="mpesa"].selecionado { border-color: var(--mpesa); background: #fff5f6; }
+    .metodo-card[data-m="emola"].selecionado { border-color: var(--emola); background: #f0f8ff; }
+    .metodo-card[data-m="mkesh"].selecionado { border-color: var(--mkesh); background: #fff8f0; }
+
+    /* DADOS PAGAMENTO */
+    .dados-form { display: none; margin-top: 16px; }
+    .dados-form.show { display: block; }
+    label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+    input { width: 100%; padding: 12px 14px; border: 2px solid var(--cinza-borda); border-radius: 10px; font-size: 15px; outline: none; transition: border-color 0.2s; }
+    input:focus { border-color: var(--azul); }
+    .form-group { margin-bottom: 14px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* REFERÊNCIA */
+    .ref-box {
+      background: linear-gradient(135deg, #1877f2, #0d5ec9);
+      color: #fff; border-radius: 12px; padding: 20px;
+      text-align: center; margin: 16px 0;
+    }
+    .ref-titulo { font-size: 13px; opacity: 0.85; margin-bottom: 6px; }
+    .ref-codigo { font-size: 28px; font-weight: 900; letter-spacing: 4px; font-family: monospace; }
+    .ref-copiar { background: rgba(255,255,255,0.2); color: #fff; border: none; border-radius: 8px; padding: 6px 16px; cursor: pointer; font-size: 13px; margin-top: 8px; }
+
+    /* INSTRUCÕES */
+    .instrucoes { background: #f8fafc; border-radius: 10px; padding: 16px; }
+    .instrucao-step { display: flex; gap: 12px; margin-bottom: 12px; }
+    .step-num { background: var(--azul); color: #fff; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+    .step-txt { font-size: 14px; color: var(--texto-sec); line-height: 1.5; }
+
+    /* BOTÃO */
+    .btn-pagar { width: 100%; background: var(--verde); color: #fff; border: none; border-radius: 10px; padding: 16px; font-size: 17px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s; }
+    .btn-pagar:hover { background: #1b5e20; }
+    .btn-pagar:disabled { background: #a5d6a7; cursor: not-allowed; }
+    .spinner { width: 22px; height: 22px; border: 3px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* RESUMO */
+    .resumo-linha { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--cinza-borda); font-size: 14px; }
+    .resumo-linha:last-child { border-bottom: none; }
+    .resumo-total { font-size: 18px; font-weight: 800; color: var(--azul); }
+
+    /* SUCESSO */
+    .sucesso-card { text-align: center; padding: 32px; }
+    .sucesso-card .check { font-size: 72px; margin-bottom: 12px; }
+    .sucesso-titulo { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+    .sucesso-sub { color: var(--texto-sec); margin-bottom: 24px; }
+    .btn-ir { display: inline-block; background: var(--azul); color: #fff; border: none; border-radius: 10px; padding: 13px 28px; font-size: 16px; font-weight: 700; cursor: pointer; text-decoration: none; margin: 6px; }
+
+    #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px); background: #323232; color: #fff; padding: 12px 24px; border-radius: 30px; font-size: 14px; z-index: 9999; transition: transform 0.3s; }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* TIMER */
+    .timer-badge { background: #fff3e0; color: #ef6c00; border-radius: 20px; padding: 6px 14px; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+  </style>
+</head>
+<body>
+<header>
+  <a class="logo" href="index.html">🛍️ Luvano</a>
+  <a href="javascript:history.back()" class="btn-voltar">← Voltar</a>
+</header>
+
+<div class="container" id="mainContainer">
+  <div style="text-align:center;padding:60px;color:var(--texto-sec)">
+    <div style="font-size:40px">⏳</div>
+    <p>A preparar pagamento...</p>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://SEU_PROJETO.supabase.co';
+const SUPABASE_ANON_KEY = 'SUA_ANON_KEY_AQUI';
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const params = new URLSearchParams(window.location.search);
+const produtoId = params.get('produto');
+let produto = null;
+let usuario = null;
+let metodoSelecionado = null;
+let referencia = '';
+let timerPagamento;
+let tempoRestante = 900; // 15 minutos
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    window.location.href = `login.html?next=pagamento.html?produto=${produtoId}`;
+    return;
+  }
+  usuario = session.user;
+  await carregarProduto();
+});
+
+async function carregarProduto() {
+  let prod = null;
+  
+  if (produtoId) {
+    const { data } = await sb.from('produtos').select('*, users(nome, telefone)').eq('id', produtoId).single();
+    prod = data;
+  }
+  
+  // Demo
+  if (!prod) {
+    prod = {
+      id: 1, nome: 'iPhone 14 Pro 256GB', preco: 65000,
+      fotos: JSON.stringify(['https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=300&q=80']),
+      vendedor_id: 'demo', users: { nome: 'João Silva' }
+    };
+  }
+
+  produto = prod;
+  referencia = gerarReferencia();
+  renderizarPagamento();
+}
+
+function gerarReferencia() {
+  return 'LVN' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2,5).toUpperCase();
+}
+
+function renderizarPagamento() {
+  const fotos = typeof produto.fotos === 'string' ? JSON.parse(produto.fotos) : (produto.fotos || []);
+  const foto = fotos[0] || 'https://via.placeholder.com/80x80';
+  const comissao = produto.preco * 0.03; // 3% comissão
+  const total = produto.preco;
+
+  document.getElementById('mainContainer').innerHTML = `
+    <!-- ESQUERDA -->
+    <div>
+      <div class="card">
+        <div class="section-titulo">💳 Método de Pagamento</div>
+        
+        <div class="metodos-grid">
+          <div class="metodo-card" data-m="mpesa" onclick="selecionarMetodo('mpesa', this)">
+            <div class="metodo-icon" style="background:#D41B34;border-radius:50%;padding:8px;font-size:24px">📱</div>
+            <div class="metodo-nome" style="color:#D41B34">M-Pesa</div>
+            <div class="metodo-desc">Vodacom · Instantâneo</div>
+          </div>
+          <div class="metodo-card" data-m="emola" onclick="selecionarMetodo('emola', this)">
+            <div class="metodo-icon" style="background:#0094D9;border-radius:50%;padding:8px;font-size:24px">📲</div>
+            <div class="metodo-nome" style="color:#0094D9">E-Mola</div>
+            <div class="metodo-desc">Movitel · Instantâneo</div>
+          </div>
+          <div class="metodo-card" data-m="mkesh" onclick="selecionarMetodo('mkesh', this)">
+            <div class="metodo-icon" style="background:#F7941D;border-radius:50%;padding:8px;font-size:24px">💰</div>
+            <div class="metodo-nome" style="color:#F7941D">mKesh</div>
+            <div class="metodo-desc">Tmcel · Instantâneo</div>
+          </div>
+          <div class="metodo-card" data-m="cartao" onclick="selecionarMetodo('cartao', this)">
+            <div class="metodo-icon" style="font-size:32px">💳</div>
+            <div class="metodo-nome">Cartão</div>
+            <div class="metodo-desc">VISA / Mastercard</div>
+          </div>
+        </div>
+
+        <!-- Formulário M-Pesa / E-Mola / mKesh -->
+        <div class="dados-form" id="formMovel">
+          <div style="margin-top:16px;background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:14px">
+            <div class="ref-titulo" style="color:var(--texto-sec);font-size:13px">Referência de Pagamento</div>
+            <div style="font-size:22px;font-weight:900;font-family:monospace;letter-spacing:3px;color:var(--azul)">${referencia}</div>
+            <button onclick="copiarRef('${referencia}')" style="background:none;border:none;color:var(--azul);cursor:pointer;font-size:13px;font-weight:600;margin-top:4px">📋 Copiar Referência</button>
+          </div>
+          <div class="form-group">
+            <label>Número do seu Telemóvel <span style="color:var(--vermelho)">*</span></label>
+            <input type="tel" id="numeroMovel" placeholder="258 84 123 4567" />
+          </div>
+          <div class="instrucoes" id="instrucoesMovel">
+            <!-- Instruções específicas por método -->
+          </div>
+        </div>
+
+        <!-- Formulário Cartão -->
+        <div class="dados-form" id="formCartao">
+          <div class="form-group">
+            <label>Número do Cartão</label>
+            <input type="text" id="numCartao" placeholder="1234 5678 9012 3456" maxlength="19" oninput="formatarCartao(this)" />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Validade</label>
+              <input type="text" id="validade" placeholder="MM/AA" maxlength="5" oninput="formatarValidade(this)" />
+            </div>
+            <div class="form-group">
+              <label>CVV</label>
+              <input type="text" id="cvv" placeholder="123" maxlength="3" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Nome no Cartão</label>
+            <input type="text" id="nomeCartao" placeholder="NOME COMO APARECE NO CARTÃO" style="text-transform:uppercase" />
+          </div>
+        </div>
+
+        <!-- Timer -->
+        <div style="margin-top:16px;text-align:center" id="timerSection" style="display:none">
+          <div class="timer-badge">⏱️ Tempo restante: <span id="timerTxt">15:00</span></div>
+          <div style="font-size:12px;color:var(--texto-sec);margin-top:6px">Complete o pagamento antes do tempo expirar</div>
+        </div>
+      </div>
+
+      <!-- Segurança -->
+      <div class="card" style="background:linear-gradient(135deg,#e8f5e9,#f0fff4)">
+        <div style="font-size:14px;font-weight:700;color:#2e7d32;margin-bottom:8px">🔒 Pagamento 100% Seguro</div>
+        <div style="font-size:13px;color:#388e3c;line-height:1.7">
+          ✅ Transação criptografada e segura<br>
+          ✅ Referência única por transação<br>
+          ✅ Confirmação automática via SMS<br>
+          ✅ Suporte 24h disponível
+        </div>
+      </div>
+    </div>
+
+    <!-- DIREITA: Resumo -->
+    <div>
+      <div class="card">
+        <div class="section-titulo">🛒 Resumo do Pedido</div>
+        
+        <div style="display:flex;gap:12px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--cinza-borda)">
+          <img src="${foto}" alt="${produto.nome}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;flex-shrink:0" onerror="this.src='https://via.placeholder.com/72'" />
+          <div>
+            <div style="font-weight:700;font-size:15px;margin-bottom:4px">${produto.nome}</div>
+            <div style="color:var(--texto-sec);font-size:13px">Vendedor: ${produto.users?.nome || 'Luvano'}</div>
+          </div>
+        </div>
+
+        <div class="resumo-linha">
+          <span>Preço do produto</span>
+          <span>MT ${Number(produto.preco).toLocaleString('pt-MZ')}</span>
+        </div>
+        <div class="resumo-linha">
+          <span>Taxa de serviço (3%)</span>
+          <span>MT ${Number(comissao).toLocaleString('pt-MZ', {minimumFractionDigits:2})}</span>
+        </div>
+        <div class="resumo-linha">
+          <span>Entrega</span>
+          <span style="color:var(--verde)">Gratuita</span>
+        </div>
+        <div class="resumo-linha">
+          <span style="font-weight:700;font-size:16px">Total a Pagar</span>
+          <span class="resumo-total">MT ${Number(total).toLocaleString('pt-MZ')}</span>
+        </div>
+
+        <button class="btn-pagar" onclick="processarPagamento()" id="btnPagar" disabled>
+          🔒 Confirmar Pagamento <div class="spinner" id="spin"></div>
+        </button>
+        <div style="text-align:center;font-size:12px;color:var(--texto-sec);margin-top:10px">
+          Ao confirmar, aceita os nossos Termos de Serviço
+        </div>
+      </div>
+
+      <!-- Métodos aceites -->
+      <div class="card" style="text-align:center">
+        <div style="font-size:13px;color:var(--texto-sec);margin-bottom:10px">Métodos Aceites</div>
+        <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap">
+          <span style="background:#D41B34;color:#fff;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:700">M-Pesa</span>
+          <span style="background:#0094D9;color:#fff;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:700">E-Mola</span>
+          <span style="background:#F7941D;color:#fff;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:700">mKesh</span>
+          <span style="background:#1a1a2e;color:#fff;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:700">Cartão</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+const instrucoes = {
+  mpesa: `
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:#D41B34">📱 Como pagar via M-Pesa:</div>
+    <div class="instrucao-step"><div class="step-num" style="background:#D41B34">1</div><div class="step-txt">Marque <strong>*150*00#</strong> no seu telemóvel Vodacom</div></div>
+    <div class="instrucao-step"><div class="step-num" style="background:#D41B34">2</div><div class="step-txt">Selecione <strong>Transferências</strong> → <strong>Pagar por referência</strong></div></div>
+    <div class="instrucao-step"><div class="step-num" style="background:#D41B34">3</div><div class="step-txt">Insira a referência: <strong id="refDisplay1"></strong></div></div>
+    <div class="instrucao-step"><div class="step-num" style="background:#D41B34">4</div><div class="step-txt">Confirme o valor e insira o seu PIN M-Pesa</div></div>`,
+  emola: `
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:#0094D9">📲 Como pagar via E-Mola:</div>
+    <div class="instrucao-step"><div class="step-num" style="background:#0094D9">1</div><div class="step-txt">Abra a app <strong>E-Mola</strong> ou marque <strong>*884#</strong></div></div>
+    <div class="instrucao-step"><div class="step-num" style="background:#0094D9">2</div><div class="step-txt">Selecione <strong>Pagamentos</strong> → <strong>Por Referência</strong></div></div>
+    <div class="instrucao-step"><div class="step-num" style="background:#0094D9">3</div><div class="step-txt">Insira a referência: <strong id="refDisplay2"></strong></div></div>
+    <div class="instrucao-step"><div class="step-num" style="background:#0094D9">4</div><div class="step-txt">Confirme o montante e autorize com o PIN</div></div>`,
+  mkesh: `
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:#F7941D">💰 Como pagar via mKesh:</div>
+    <div class="instrucao-step"><div class="step-num" style="background:#F7941D">1</div><div class="step-txt">Marque <strong>*111#</strong> no seu telemóvel Tmcel</div></div>
+    <div class="instrucao-step"><div class="step-num" style="background:#F7941D">2</div><div class="step-txt">Escolha <strong>mKesh</strong> → <strong>Pagar Serviço</strong></div></div>
+    <div class="instrucao-step"><div class="step-num" style="background:#F7941D">3</div><div class="step-txt">Insira a referência: <strong id="refDisplay3"></strong></div></div>
+    <div class="instrucao-step"><div class="step-num" style="background:#F7941D">4</div><div class="step-txt">Confirme com o seu PIN mKesh</div></div>`
+};
+
+function selecionarMetodo(metodo, el) {
+  metodoSelecionado = metodo;
+  document.querySelectorAll('.metodo-card').forEach(c => c.classList.remove('selecionado'));
+  el.classList.add('selecionado');
+
+  const formMovel = document.getElementById('formMovel');
+  const formCartao = document.getElementById('formCartao');
+  
+  if (metodo === 'cartao') {
+    formMovel.classList.remove('show');
+    formCartao.classList.add('show');
+  } else {
+    formCartao.classList.remove('show');
+    formMovel.classList.add('show');
+    const instr = document.getElementById('instrucoesMovel');
+    instr.innerHTML = `<div class="instrucoes">${instrucoes[metodo]}</div>`;
+    // Preencher referência nas instruções
+    ['refDisplay1','refDisplay2','refDisplay3'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = referencia;
+    });
+  }
+
+  document.getElementById('timerSection')?.style?.setProperty('display','block');
+  iniciarTimer();
+  document.getElementById('btnPagar').disabled = false;
+}
+
+function iniciarTimer() {
+  clearInterval(timerPagamento);
+  tempoRestante = 900;
+  timerPagamento = setInterval(() => {
+    tempoRestante--;
+    const min = Math.floor(tempoRestante / 60);
+    const sec = tempoRestante % 60;
+    const el = document.getElementById('timerTxt');
+    if (el) el.textContent = `${min}:${sec.toString().padStart(2,'0')}`;
+    if (tempoRestante <= 0) {
+      clearInterval(timerPagamento);
+      mostrarToast('Tempo expirado! Por favor tente novamente.', 'erro');
+    }
+  }, 1000);
+}
+
+async function processarPagamento() {
+  if (!metodoSelecionado) { mostrarToast('Selecione o método de pagamento', 'erro'); return; }
+  
+  let numero = '';
+  if (metodoSelecionado !== 'cartao') {
+    numero = document.getElementById('numeroMovel')?.value?.trim() || '';
+    if (!numero) { mostrarToast('Insira o número do telemóvel', 'erro'); return; }
+  } else {
+    const nc = document.getElementById('numCartao')?.value?.replace(/\s/g,'') || '';
+    const val = document.getElementById('validade')?.value || '';
+    const cvv = document.getElementById('cvv')?.value || '';
+    if (!nc || !val || !cvv) { mostrarToast('Preencha todos os dados do cartão', 'erro'); return; }
+    numero = nc;
+  }
+
+  document.getElementById('btnPagar').disabled = true;
+  document.getElementById('spin').style.display = 'block';
+  clearInterval(timerPagamento);
+
+  // Registar pagamento no Supabase
+  const comissao = produto.preco * 0.03;
+  const valorVendedor = produto.preco - comissao;
+
+  const { data: pag, error } = await sb.from('pagamentos').insert({
+    produto_id: produto.id,
+    usuario_id: usuario.id,
+    vendedor_id: produto.vendedor_id,
+    metodo: metodoSelecionado,
+    numero: numero.replace(/\D/g, ''),
+    referencia,
+    status: 'pendente',
+    valor: produto.preco,
+    comissao,
+    valor_vendedor: valorVendedor,
+    criado_em: new Date().toISOString()
+  }).select().single();
+
+  // Simular confirmação de pagamento (em produção, usar webhook da operadora)
+  setTimeout(async () => {
+    if (error) {
+      console.log('Usando demo mode');
+    }
+
+    // Actualizar status para confirmado
+    if (pag) {
+      await sb.from('pagamentos').update({ status: 'confirmado' }).eq('id', pag.id);
+      // Actualizar saldo do vendedor
+      const { data: carteira } = await sb.from('carteira').select('saldo').eq('usuario_id', produto.vendedor_id).single();
+      if (carteira) {
+        await sb.from('carteira').update({ saldo: carteira.saldo + valorVendedor }).eq('usuario_id', produto.vendedor_id);
+      }
+      // Notificar vendedor
+      await sb.from('notificacoes').insert({
+        usuario_id: produto.vendedor_id,
+        tipo: 'venda',
+        mensagem: `Nova venda confirmada: ${produto.nome} (MT ${Number(produto.preco).toLocaleString('pt-MZ')})`,
+        visto: false,
+        data: new Date().toISOString()
+      });
+    }
+
+    document.getElementById('spin').style.display = 'none';
+    mostrarSucesso();
+  }, 3000);
+
+  mostrarToast('A processar pagamento...', 'info');
+}
+
+function mostrarSucesso() {
+  document.getElementById('mainContainer').innerHTML = `
+    <div class="card sucesso-card" style="grid-column:1/-1">
+      <div class="check">✅</div>
+      <div class="sucesso-titulo">Pagamento Confirmado!</div>
+      <div class="sucesso-sub">
+        O seu pagamento foi processado com sucesso via ${metodoSelecionado.toUpperCase()}.<br>
+        Referência: <strong>${referencia}</strong>
+      </div>
+      <div style="background:#f0f8ff;border-radius:12px;padding:20px;margin:20px auto;max-width:400px;text-align:left">
+        <div style="font-weight:700;margin-bottom:10px">📋 Detalhes da Transação</div>
+        <div style="font-size:14px;line-height:2;color:var(--texto-sec)">
+          Produto: <strong style="color:var(--texto)">${produto.nome}</strong><br>
+          Método: <strong style="color:var(--texto)">${metodoSelecionado.toUpperCase()}</strong><br>
+          Referência: <strong style="color:var(--azul)">${referencia}</strong><br>
+          Valor: <strong style="color:var(--verde)">MT ${Number(produto.preco).toLocaleString('pt-MZ')}</strong><br>
+          Data: <strong style="color:var(--texto)">${new Date().toLocaleDateString('pt-MZ')}</strong>
+        </div>
+      </div>
+      <div>
+        <a href="compras.html" class="btn-ir">📦 Ver Minhas Compras</a>
+        <a href="index.html" class="btn-ir" style="background:#fff;color:var(--azul);border:2px solid var(--azul)">🏠 Voltar ao Início</a>
+      </div>
+    </div>`;
+}
+
+function copiarRef(ref) {
+  navigator.clipboard.writeText(ref).then(() => mostrarToast('Referência copiada!', 'sucesso'));
+}
+
+function formatarCartao(inp) {
+  let v = inp.value.replace(/\D/g,'').substring(0,16);
+  inp.value = v.replace(/(.{4})/g,'$1 ').trim();
+}
+
+function formatarValidade(inp) {
+  let v = inp.value.replace(/\D/g,'');
+  if (v.length >= 2) v = v.substring(0,2) + '/' + v.substring(2,4);
+  inp.value = v;
+}
+
+function mostrarToast(msg, tipo='info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = tipo==='erro'?'#c62828':tipo==='sucesso'?'#2e7d32':'#1877f2';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js")
+      .then(r => console.log("[Luvano SW] Registado:", r.scope))
+      .catch(e => console.warn("[Luvano SW] Erro:", e));
+  });
+}
+</script>
+</body>
+</html>

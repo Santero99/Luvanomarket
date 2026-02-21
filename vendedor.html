@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="pt-MZ">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Painel do Vendedor - Luvano</title>
+  <link rel="manifest" href="manifest.json"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --azul: #1877f2; --azul-dark: #0d5ec9; --azul-light: #e7f0ff;
+      --cinza-bg: #f0f2f5; --cinza-borda: #dde1e7;
+      --texto: #1c1e21; --texto-sec: #65676b;
+      --verde: #2e7d32; --amarelo: #f4af00; --vermelho: #e41e3f;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--cinza-bg); }
+    header { background: var(--azul); padding: 0 20px; height: 60px; display: flex; align-items: center; justify-content: space-between; }
+    header a.logo { color: #fff; font-size: 20px; font-weight: 800; text-decoration: none; }
+    .nav-links { display: flex; gap: 8px; }
+    .nav-link { color: rgba(255,255,255,0.85); text-decoration: none; font-size: 14px; padding: 6px 12px; border-radius: 6px; transition: background 0.15s; }
+    .nav-link:hover { background: rgba(255,255,255,0.15); }
+    .container { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .page-titulo { font-size: 24px; font-weight: 800; }
+    .card { background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); padding: 22px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+    @media (max-width: 700px) { .grid-3 { grid-template-columns: 1fr; } }
+    .stat-card { background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); padding: 20px; display: flex; align-items: center; gap: 14px; }
+    .stat-icon { width: 52px; height: 52px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 26px; flex-shrink: 0; }
+    .stat-val { font-size: 24px; font-weight: 900; }
+    .stat-label { font-size: 13px; color: var(--texto-sec); margin-top: 2px; }
+    .stat-change { font-size: 12px; font-weight: 600; margin-top: 4px; }
+    .up { color: var(--verde); }
+    .down { color: var(--vermelho); }
+
+    /* CARTEIRA */
+    .carteira-card {
+      background: linear-gradient(135deg, #1877f2 0%, #0d5ec9 60%, #1a3a8a 100%);
+      color: #fff; border-radius: 16px; padding: 28px;
+      margin-bottom: 24px; position: relative; overflow: hidden;
+    }
+    .carteira-card::before { content: '💳'; position: absolute; right: -10px; top: -10px; font-size: 120px; opacity: 0.1; }
+    .carteira-titulo { font-size: 14px; opacity: 0.85; margin-bottom: 6px; }
+    .carteira-saldo { font-size: 40px; font-weight: 900; letter-spacing: -1px; margin-bottom: 16px; }
+    .carteira-btns { display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn-carteira { background: rgba(255,255,255,0.2); color: #fff; border: none; border-radius: 8px; padding: 10px 18px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 6px; transition: background 0.2s; }
+    .btn-carteira:hover { background: rgba(255,255,255,0.3); }
+    .btn-carteira.primary { background: #fff; color: var(--azul); }
+    .btn-carteira.primary:hover { background: var(--azul-light); }
+
+    /* PRODUTOS */
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .section-titulo { font-size: 18px; font-weight: 700; }
+    .btn-link { color: var(--azul); font-size: 14px; font-weight: 600; text-decoration: none; }
+    .produtos-lista { display: flex; flex-direction: column; gap: 12px; }
+    .produto-row { display: flex; gap: 12px; align-items: center; padding: 12px; background: #f8fafc; border-radius: 10px; }
+    .produto-row img { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+    .produto-row-info { flex: 1; }
+    .produto-row-nome { font-weight: 700; font-size: 15px; margin-bottom: 2px; }
+    .produto-row-detalhe { font-size: 13px; color: var(--texto-sec); }
+    .badge-status { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    .badge-ativo { background: #e8f5e9; color: var(--verde); }
+    .badge-inativo { background: #fff3e0; color: #ef6c00; }
+    .badge-vendido { background: #e3f2fd; color: var(--azul); }
+    .produto-row-acoes { display: flex; gap: 6px; }
+    .btn-mini { padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; }
+    .btn-edit { background: var(--azul-light); color: var(--azul); }
+    .btn-del { background: #ffebee; color: var(--vermelho); }
+
+    /* VENDAS */
+    .vendas-lista { display: flex; flex-direction: column; gap: 10px; }
+    .venda-item { padding: 14px; background: #f8fafc; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .venda-info .venda-nome { font-weight: 700; font-size: 14px; }
+    .venda-info .venda-meta { font-size: 12px; color: var(--texto-sec); margin-top: 2px; }
+    .venda-valor { font-size: 18px; font-weight: 800; color: var(--verde); }
+    
+    .tabs { display: flex; gap: 4px; border-bottom: 2px solid var(--cinza-borda); margin-bottom: 20px; }
+    .tab { padding: 10px 18px; border: none; background: none; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--texto-sec); border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s; }
+    .tab.ativo { color: var(--azul); border-bottom-color: var(--azul); }
+
+    #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px); background: #323232; color: #fff; padding: 12px 24px; border-radius: 30px; font-size: 14px; z-index: 9999; transition: transform 0.3s; }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+<header>
+  <a class="logo" href="index.html">🛍️ Luvano</a>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">🏠 Início</a>
+    <a href="notificacoes.html" class="nav-link">🔔</a>
+    <a href="perfil.html" class="nav-link">👤</a>
+  </div>
+</header>
+
+<div class="container">
+  <div class="page-header">
+    <div>
+      <div class="page-titulo">💼 Painel do Vendedor</div>
+      <div style="color:var(--texto-sec);font-size:14px" id="nomeVendedor">Bem-vindo de volta!</div>
+    </div>
+    <a href="publicar.html" style="background:var(--azul);color:#fff;border:none;border-radius:8px;padding:10px 18px;font-weight:700;font-size:14px;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:6px">
+      ➕ Publicar Produto
+    </a>
+  </div>
+
+  <!-- ESTATÍSTICAS -->
+  <div class="grid-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#e3f2fd">📦</div>
+      <div>
+        <div class="stat-val" id="totalProdutos">-</div>
+        <div class="stat-label">Produtos Activos</div>
+        <div class="stat-change up">↑ 2 este mês</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#e8f5e9">💰</div>
+      <div>
+        <div class="stat-val" id="totalVendas">-</div>
+        <div class="stat-label">Total Vendas</div>
+        <div class="stat-change up">↑ 15% este mês</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fff8e1">⭐</div>
+      <div>
+        <div class="stat-val" id="mediaAvaliacao">-</div>
+        <div class="stat-label">Avaliação Média</div>
+        <div class="stat-change" style="color:var(--amarelo)">★★★★★</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CARTEIRA -->
+  <div class="carteira-card">
+    <div class="carteira-titulo">💳 Saldo da Carteira</div>
+    <div class="carteira-saldo">MT <span id="saldoCarteira">0,00</span></div>
+    <div class="carteira-btns">
+      <a href="levantamento.html" class="btn-carteira primary">💸 Levantar Dinheiro</a>
+      <a href="carteira.html" class="btn-carteira">📊 Ver Histórico</a>
+      <div class="btn-carteira" style="opacity:0.75;cursor:default">
+        Pendente: MT <span id="saldoPendente">0,00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="card">
+    <div class="tabs">
+      <button class="tab ativo" onclick="mostrarTab('produtos', this)">📦 Meus Produtos</button>
+      <button class="tab" onclick="mostrarTab('vendas', this)">💰 Vendas</button>
+      <button class="tab" onclick="mostrarTab('mensagens', this)">💬 Mensagens</button>
+    </div>
+
+    <!-- Tab Produtos -->
+    <div id="tabProdutos">
+      <div class="section-header">
+        <div class="section-titulo">Produtos Publicados</div>
+        <a href="meus-produtos.html" class="btn-link">Ver Todos →</a>
+      </div>
+      <div class="produtos-lista" id="listaProdutos">
+        <div style="text-align:center;padding:32px;color:var(--texto-sec)">A carregar produtos...</div>
+      </div>
+    </div>
+
+    <!-- Tab Vendas -->
+    <div id="tabVendas" style="display:none">
+      <div class="section-header">
+        <div class="section-titulo">Últimas Vendas</div>
+      </div>
+      <div class="vendas-lista" id="listaVendas">
+        <div style="text-align:center;padding:32px;color:var(--texto-sec)">A carregar vendas...</div>
+      </div>
+    </div>
+
+    <!-- Tab Mensagens -->
+    <div id="tabMensagens" style="display:none">
+      <div class="section-header">
+        <div class="section-titulo">Conversas Recentes</div>
+        <a href="conversas.html" class="btn-link">Ver Todas →</a>
+      </div>
+      <div id="listaConversas" style="text-align:center;padding:32px;color:var(--texto-sec)">A carregar...</div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://SEU_PROJETO.supabase.co';
+const SUPABASE_ANON_KEY = 'SUA_ANON_KEY_AQUI';
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let usuario = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { window.location.href = 'login.html'; return; }
+  usuario = session.user;
+  await carregarDados();
+});
+
+async function carregarDados() {
+  // Perfil
+  const { data: perfil } = await sb.from('users').select('*').eq('id', usuario.id).single();
+  if (perfil) {
+    document.getElementById('nomeVendedor').textContent = `Olá, ${perfil.nome?.split(' ')[0] || 'Vendedor'}! 👋`;
+  }
+
+  // Carteira
+  const { data: carteira } = await sb.from('carteira').select('saldo').eq('usuario_id', usuario.id).single();
+  document.getElementById('saldoCarteira').textContent = Number(carteira?.saldo || 0).toLocaleString('pt-MZ', {minimumFractionDigits:2});
+
+  // Saldo pendente (pagamentos confirmados não levantados)
+  const { data: pendente } = await sb.from('pagamentos').select('valor_vendedor').eq('vendedor_id', usuario.id).eq('status', 'pendente');
+  const totalPendente = (pendente || []).reduce((s,p) => s + (p.valor_vendedor || 0), 0);
+  document.getElementById('saldoPendente').textContent = Number(totalPendente).toLocaleString('pt-MZ', {minimumFractionDigits:2});
+
+  // Produtos
+  const { data: produtos, count: nProd } = await sb.from('produtos').select('*', {count:'exact'}).eq('vendedor_id', usuario.id).eq('ativo', true).limit(5).order('criado_em', {ascending:false});
+  document.getElementById('totalProdutos').textContent = nProd || 0;
+
+  if (produtos && produtos.length > 0) {
+    const lista = document.getElementById('listaProdutos');
+    lista.innerHTML = '';
+    produtos.forEach(p => {
+      const fotos = typeof p.fotos === 'string' ? JSON.parse(p.fotos) : (p.fotos || []);
+      const item = document.createElement('div');
+      item.className = 'produto-row';
+      item.innerHTML = `
+        <img src="${fotos[0] || 'https://via.placeholder.com/64'}" alt="${p.nome}" onerror="this.src='https://via.placeholder.com/64'"/>
+        <div class="produto-row-info">
+          <div class="produto-row-nome">${p.nome}</div>
+          <div class="produto-row-detalhe">MT ${Number(p.preco).toLocaleString('pt-MZ')} · ${p.local || ''}</div>
+        </div>
+        <span class="badge-status badge-ativo">✅ Activo</span>
+        <div class="produto-row-acoes">
+          <button class="btn-mini btn-edit" onclick="editarProduto(${p.id})">✏️ Editar</button>
+          <button class="btn-mini btn-del" onclick="removerProduto(${p.id})">🗑️</button>
+        </div>`;
+      lista.appendChild(item);
+    });
+  } else {
+    // Demo
+    document.getElementById('listaProdutos').innerHTML = `
+      <div class="produto-row">
+        <img src="https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=64&q=80" alt="iPhone"/>
+        <div class="produto-row-info">
+          <div class="produto-row-nome">iPhone 14 Pro 256GB</div>
+          <div class="produto-row-detalhe">MT 65,000 · Maputo</div>
+        </div>
+        <span class="badge-status badge-ativo">✅ Activo</span>
+        <div class="produto-row-acoes">
+          <button class="btn-mini btn-edit">✏️ Editar</button>
+          <button class="btn-mini btn-del">🗑️</button>
+        </div>
+      </div>
+      <div style="text-align:center;padding:16px"><a href="publicar.html" style="color:var(--azul);font-weight:600">+ Publicar novo produto</a></div>`;
+    document.getElementById('totalProdutos').textContent = '1';
+  }
+
+  // Vendas
+  const { data: vendas } = await sb.from('pagamentos').select('*, produtos(nome, preco)').eq('vendedor_id', usuario.id).eq('status', 'confirmado').order('criado_em', {ascending:false}).limit(5);
+  const totalVendido = (vendas || []).reduce((s,v) => s + (v.valor || 0), 0);
+  document.getElementById('totalVendas').textContent = `MT ${Number(totalVendido).toLocaleString('pt-MZ')}`;
+
+  const listaV = document.getElementById('listaVendas');
+  if (vendas && vendas.length > 0) {
+    listaV.innerHTML = vendas.map(v => `
+      <div class="venda-item">
+        <div class="venda-info">
+          <div class="venda-nome">${v.produtos?.nome || 'Produto'}</div>
+          <div class="venda-meta">${v.metodo?.toUpperCase()} · ${new Date(v.criado_em).toLocaleDateString('pt-MZ')}</div>
+        </div>
+        <div class="venda-valor">+ MT ${Number(v.valor_vendedor || v.valor).toLocaleString('pt-MZ')}</div>
+      </div>`).join('');
+  } else {
+    listaV.innerHTML = `
+      <div class="venda-item">
+        <div class="venda-info">
+          <div class="venda-nome">iPhone 14 Pro 256GB</div>
+          <div class="venda-meta">M-Pesa · ${new Date().toLocaleDateString('pt-MZ')}</div>
+        </div>
+        <div class="venda-valor">+ MT 63,050</div>
+      </div>
+      <div style="text-align:center;padding:16px;color:var(--texto-sec);font-size:14px">Sem mais vendas recentes</div>`;
+    document.getElementById('totalVendas').textContent = 'MT 63,050';
+  }
+
+  // Avaliação média
+  const { data: avals } = await sb.from('avaliacoes').select('nota').eq('produto_id', 'any(select id from produtos where vendedor_id = ' + usuario.id + ')').limit(100);
+  if (avals && avals.length > 0) {
+    const media = avals.reduce((s,a) => s + a.nota, 0) / avals.length;
+    document.getElementById('mediaAvaliacao').textContent = media.toFixed(1);
+  } else {
+    document.getElementById('mediaAvaliacao').textContent = '4.8';
+  }
+
+  // Conversas
+  const { data: convs } = await sb.from('conversas')
+    .select('*, users!conversas_usuario1_fkey(nome)')
+    .or(`usuario1.eq.${usuario.id},usuario2.eq.${usuario.id}`)
+    .order('data', {ascending:false}).limit(5);
+
+  const listaC = document.getElementById('listaConversas');
+  if (convs && convs.length > 0) {
+    listaC.innerHTML = convs.map(c => `
+      <div class="produto-row" onclick="window.location.href='chat.html?conversa=${c.id}'" style="cursor:pointer">
+        <div class="stat-icon" style="background:var(--azul-light);font-size:20px">💬</div>
+        <div class="produto-row-info">
+          <div class="produto-row-nome">${c.users?.nome || 'Cliente'}</div>
+          <div class="produto-row-detalhe">${c.ultimo_mensagem || 'Sem mensagens'} · ${new Date(c.data).toLocaleDateString('pt-MZ')}</div>
+        </div>
+      </div>`).join('');
+  } else {
+    listaC.innerHTML = `<div style="padding:32px;text-align:center;color:var(--texto-sec)">Sem conversas ainda</div>`;
+  }
+}
+
+function mostrarTab(tab, el) {
+  ['Produtos','Vendas','Mensagens'].forEach(t => {
+    document.getElementById(`tab${t}`).style.display = 'none';
+  });
+  document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`).style.display = 'block';
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('ativo'));
+  el.classList.add('ativo');
+}
+
+function editarProduto(id) {
+  window.location.href = `publicar.html?editar=${id}`;
+}
+
+async function removerProduto(id) {
+  if (!confirm('Tem certeza que deseja remover este produto?')) return;
+  const { error } = await sb.from('produtos').update({ ativo: false }).eq('id', id);
+  if (error) { mostrarToast('Erro ao remover produto', 'erro'); return; }
+  mostrarToast('Produto removido', 'sucesso');
+  setTimeout(() => carregarDados(), 500);
+}
+
+function mostrarToast(msg, tipo='info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = tipo==='erro'?'#c62828':tipo==='sucesso'?'#2e7d32':'#323232';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js")
+      .then(r => console.log("[Luvano SW] Registado:", r.scope))
+      .catch(e => console.warn("[Luvano SW] Erro:", e));
+  });
+}
+</script>
+</body>
+</html>

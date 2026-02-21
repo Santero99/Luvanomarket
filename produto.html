@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="pt-MZ">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Produto - Luvano</title>
+  <link rel="manifest" href="manifest.json"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --azul: #1877f2; --azul-dark: #0d5ec9; --azul-light: #e7f0ff;
+      --cinza-bg: #f0f2f5; --cinza-borda: #dde1e7;
+      --texto: #1c1e21; --texto-sec: #65676b; --verde: #25D366;
+      --vermelho: #e41e3f; --amarelo: #f4af00;
+      --radius: 12px; --sombra: 0 2px 12px rgba(0,0,0,0.1);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--cinza-bg); }
+    header { background: var(--azul); padding: 0 20px; height: 60px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+    header a.logo { color: #fff; font-size: 20px; font-weight: 800; text-decoration: none; }
+    .btn-voltar { color: #fff; background: rgba(255,255,255,0.2); border: none; border-radius: 8px; padding: 8px 14px; cursor: pointer; font-size: 14px; text-decoration: none; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 24px 16px; display: grid; grid-template-columns: 1fr 380px; gap: 20px; }
+    @media (max-width: 768px) { .container { grid-template-columns: 1fr; } }
+
+    /* GALERIA */
+    .galeria-card { background: #fff; border-radius: var(--radius); box-shadow: var(--sombra); overflow: hidden; }
+    .foto-principal { position: relative; aspect-ratio: 1; overflow: hidden; background: var(--cinza-bg); }
+    .foto-principal img { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; }
+    .nav-foto { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: #fff; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; }
+    .nav-foto.prev { left: 10px; }
+    .nav-foto.next { right: 10px; }
+    .foto-counter { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.65); color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 13px; }
+    .miniaturas { display: flex; gap: 8px; padding: 12px; overflow-x: auto; }
+    .miniatura { width: 72px; height: 72px; flex-shrink: 0; border-radius: 8px; overflow: hidden; cursor: pointer; border: 3px solid transparent; transition: border-color 0.2s; }
+    .miniatura.ativa { border-color: var(--azul); }
+    .miniatura img { width: 100%; height: 100%; object-fit: cover; }
+
+    /* LIGHTBOX */
+    .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 999; display: none; align-items: center; justify-content: center; }
+    .lightbox.show { display: flex; }
+    .lightbox img { max-width: 95vw; max-height: 95vh; object-fit: contain; }
+    .lightbox-close { position: absolute; top: 16px; right: 20px; color: #fff; font-size: 36px; cursor: pointer; background: none; border: none; }
+    .lightbox-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); color: #fff; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .lightbox-prev { left: 16px; }
+    .lightbox-next { right: 16px; }
+
+    /* DETALHES */
+    .detalhes-card { background: #fff; border-radius: var(--radius); box-shadow: var(--sombra); padding: 20px; margin-top: 16px; }
+    .prod-nome { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+    .prod-preco { font-size: 30px; font-weight: 900; color: var(--azul); margin-bottom: 8px; }
+    .prod-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+    .badge-cond { background: #e8f5e9; color: #2e7d32; }
+    .badge-cat { background: var(--azul-light); color: var(--azul); }
+    .badge-negoc { background: #fff3e0; color: #ef6c00; }
+    .prod-local { color: var(--texto-sec); font-size: 14px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+    .estrelas-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+    .estrelas-grandes { display: flex; gap: 2px; }
+    .estrela-g { font-size: 22px; cursor: pointer; transition: transform 0.15s; }
+    .estrela-g:hover { transform: scale(1.2); }
+    .avaliacao-info { font-size: 13px; color: var(--texto-sec); }
+    .divider { border: none; border-top: 1px solid var(--cinza-borda); margin: 16px 0; }
+    .prod-desc { font-size: 15px; color: var(--texto); line-height: 1.6; }
+    .detalhes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+    .detalhe-item { background: var(--cinza-bg); border-radius: 8px; padding: 10px 14px; }
+    .detalhe-label { font-size: 11px; color: var(--texto-sec); font-weight: 600; margin-bottom: 3px; text-transform: uppercase; }
+    .detalhe-val { font-size: 14px; font-weight: 700; color: var(--texto); }
+
+    /* PAINEL LATERAL */
+    .painel { display: flex; flex-direction: column; gap: 16px; }
+    .card { background: #fff; border-radius: var(--radius); box-shadow: var(--sombra); padding: 20px; }
+    .btn-comprar { width: 100%; background: var(--azul); color: #fff; border: none; border-radius: 10px; padding: 15px; font-size: 17px; font-weight: 700; cursor: pointer; transition: background 0.2s; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-comprar:hover { background: var(--azul-dark); }
+    .btn-whatsapp { width: 100%; background: var(--verde); color: #fff; border: none; border-radius: 10px; padding: 14px; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s; }
+    .btn-whatsapp:hover { background: #1da951; }
+    .btn-favoritar { width: 100%; background: #fff; color: var(--texto); border: 2px solid var(--cinza-borda); border-radius: 10px; padding: 12px; font-size: 15px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; transition: all 0.2s; }
+    .btn-favoritar:hover { border-color: var(--vermelho); color: var(--vermelho); }
+    .btn-favoritar.favoritado { border-color: var(--vermelho); color: var(--vermelho); background: #fff0f3; }
+
+    /* VENDEDOR */
+    .vendedor-info { display: flex; align-items: center; gap: 12px; }
+    .vendedor-avatar { width: 50px; height: 50px; border-radius: 50%; background: var(--azul-light); display: flex; align-items: center; justify-content: center; font-size: 24px; overflow: hidden; }
+    .vendedor-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .vendedor-nome { font-weight: 700; font-size: 16px; }
+    .vendedor-member { font-size: 12px; color: var(--texto-sec); }
+    .btn-ver-perfil { color: var(--azul); font-size: 13px; font-weight: 600; text-decoration: none; }
+
+    /* AVALIAÇÕES */
+    .avaliacoes-lista { margin-top: 12px; }
+    .avaliacao-item { padding: 12px 0; border-bottom: 1px solid var(--cinza-borda); }
+    .avaliacao-item:last-child { border-bottom: none; }
+    .av-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .av-user { font-weight: 600; font-size: 14px; }
+    .av-stars { color: var(--amarelo); font-size: 14px; }
+    .av-data { font-size: 12px; color: var(--texto-sec); margin-left: auto; }
+    .av-texto { font-size: 14px; color: var(--texto-sec); }
+
+    #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px); background: #323232; color: #fff; padding: 12px 24px; border-radius: 30px; font-size: 14px; z-index: 9999; transition: transform 0.3s; }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* MODAL AVALIAÇÃO */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 998; }
+    .modal-overlay.show { display: flex; }
+    .modal { background: #fff; border-radius: 14px; padding: 28px; width: 90%; max-width: 400px; text-align: center; }
+    .modal h3 { margin-bottom: 16px; font-size: 20px; }
+    .estrelas-modal { display: flex; justify-content: center; gap: 8px; margin: 16px 0; }
+    .estrela-m { font-size: 36px; cursor: pointer; transition: transform 0.15s; }
+    .estrela-m:hover { transform: scale(1.2); }
+    .modal textarea { width: 100%; padding: 12px; border: 2px solid var(--cinza-borda); border-radius: 8px; font-size: 14px; outline: none; resize: vertical; min-height: 80px; margin-bottom: 16px; font-family: inherit; }
+    .modal-btns { display: flex; gap: 10px; }
+    .modal-btns button { flex: 1; padding: 12px; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; border: none; }
+    .btn-cancel { background: var(--cinza-bg); color: var(--texto); }
+    .btn-confirm { background: var(--azul); color: #fff; }
+  </style>
+</head>
+<body>
+<header>
+  <a class="logo" href="index.html">🛍️ Luvano</a>
+  <a href="javascript:history.back()" class="btn-voltar">← Voltar</a>
+</header>
+
+<div class="container" id="mainContainer">
+  <div style="text-align:center;padding:60px;color:var(--texto-sec)" id="loading">
+    <div style="font-size:40px">⏳</div>
+    <p>A carregar produto...</p>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="fecharLightbox(event)">
+  <button class="lightbox-close" onclick="fecharLightbox()">✕</button>
+  <button class="lightbox-nav lightbox-prev" onclick="navLightbox(-1)">‹</button>
+  <img id="lightboxImg" src="" alt="Foto ampliada" />
+  <button class="lightbox-nav lightbox-next" onclick="navLightbox(1)">›</button>
+</div>
+
+<!-- Modal Avaliação -->
+<div class="modal-overlay" id="modalAval">
+  <div class="modal">
+    <h3>⭐ Avaliar Produto</h3>
+    <p style="color:var(--texto-sec);font-size:14px">Dê a sua avaliação sobre este produto</p>
+    <div class="estrelas-modal" id="estrelasMod">
+      <span class="estrela-m" data-v="1" onclick="selecionarEstrela(1)">☆</span>
+      <span class="estrela-m" data-v="2" onclick="selecionarEstrela(2)">☆</span>
+      <span class="estrela-m" data-v="3" onclick="selecionarEstrela(3)">☆</span>
+      <span class="estrela-m" data-v="4" onclick="selecionarEstrela(4)">☆</span>
+      <span class="estrela-m" data-v="5" onclick="selecionarEstrela(5)">☆</span>
+    </div>
+    <textarea id="textAval" placeholder="Escreva a sua opinião (opcional)..."></textarea>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="document.getElementById('modalAval').classList.remove('show')">Cancelar</button>
+      <button class="btn-confirm" onclick="enviarAvaliacao()">Enviar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://SEU_PROJETO.supabase.co';
+const SUPABASE_ANON_KEY = 'SUA_ANON_KEY_AQUI';
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const params = new URLSearchParams(window.location.search);
+const produtoId = params.get('id');
+let produto = null;
+let fotos = [];
+let fotoAtual = 0;
+let avaliacaoSelecionada = 0;
+let usuarioLogado = null;
+let favoritado = false;
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) usuarioLogado = session.user;
+  
+  await carregarProduto();
+});
+
+async function carregarProduto() {
+  let prod = null;
+  
+  // Buscar do Supabase
+  if (produtoId && !isNaN(produtoId)) {
+    const { data } = await sb.from('produtos').select(`*, users(nome, avatar, criado_em, telefone)`).eq('id', produtoId).single();
+    prod = data;
+  }
+
+  // Demo product se não encontrar
+  if (!prod) {
+    prod = {
+      id: 1, nome: 'iPhone 14 Pro 256GB Preto', preco: 65000, local: 'Maputo, Sommerschield',
+      descricao: 'iPhone 14 Pro em excelente estado. Apenas 6 meses de uso, sem arranhões. Inclui caixa original, carregador, e 2 capas. Bateria com 91% de saúde. Desbloqueado para todos os operadores.\n\nMotivo da venda: mudança para outro modelo.\nNegociação possível para pagamento rápido.',
+      fotos: JSON.stringify(['https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=800&q=80','https://images.unsplash.com/photo-1591337676887-a217a6970a8a?w=800&q=80','https://images.unsplash.com/photo-1574944985070-8f3ebc6b79d2?w=800&q=80']),
+      total_fotos: 3, condicao: 'seminovo', tipo_preco: 'negociavel', categoria: 'electrodomesticos',
+      avaliacao: 4.8, total_avaliacoes: 24,
+      vendedor_tel: '258841234567',
+      users: { nome: 'João António Silva', criado_em: '2023-01-15', avatar: null }
+    };
+  }
+
+  produto = prod;
+  fotos = typeof prod.fotos === 'string' ? JSON.parse(prod.fotos) : (prod.fotos || []);
+  if (fotos.length === 0) fotos = ['https://via.placeholder.com/800x800?text=Luvano'];
+
+  // Verificar favorito
+  if (usuarioLogado) {
+    const { data: fav } = await sb.from('favoritos').select().eq('usuario_id', usuarioLogado.id).eq('produto_id', prod.id).single();
+    favoritado = !!fav;
+  }
+
+  renderizarProduto();
+}
+
+function renderizarProduto() {
+  const cond = { novo: '✨ Novo', seminovo: '👍 Semi-Novo', usado: '📦 Usado' };
+  const vendedor = produto.users || {};
+  const avaliacao = produto.avaliacao || 0;
+  const estrelas = Array.from({length:5}).map((_,i) => `<span class="estrela-g" onclick="abrirAvaliacao(${i+1})" style="color:${i < Math.round(avaliacao)?'#f4af00':'#ccc'}">${i < Math.round(avaliacao)?'★':'☆'}</span>`).join('');
+  const tel = (produto.vendedor_tel || produto.users?.telefone || '258841234567').replace(/\D/g,'');
+  const msgWA = encodeURIComponent(`Olá! Tenho interesse no produto "${produto.nome}" por MT ${Number(produto.preco).toLocaleString('pt-MZ')} no Luvano. Ainda está disponível?`);
+
+  document.getElementById('mainContainer').innerHTML = `
+    <!-- ESQUERDA: Galeria + Descrição -->
+    <div>
+      <div class="galeria-card">
+        <div class="foto-principal">
+          <img id="fotoPrincipal" src="${fotos[0]}" alt="${produto.nome}" onclick="abrirLightbox(0)" />
+          ${fotos.length > 1 ? `
+            <button class="nav-foto prev" onclick="navFoto(-1)">‹</button>
+            <button class="nav-foto next" onclick="navFoto(1)">›</button>
+          ` : ''}
+          <div class="foto-counter" id="fotoCounter">${fotos.length > 1 ? `1/${fotos.length}` : ''}</div>
+        </div>
+        ${fotos.length > 1 ? `
+          <div class="miniaturas" id="miniaturas">
+            ${fotos.map((f,i) => `<div class="miniatura ${i===0?'ativa':''}" id="min-${i}" onclick="irFoto(${i})"><img src="${f}" alt="Foto ${i+1}" /></div>`).join('')}
+          </div>
+        ` : ''}
+      </div>
+
+      <div class="detalhes-card">
+        <div class="prod-nome">${produto.nome}</div>
+        <div class="prod-preco">MT ${Number(produto.preco).toLocaleString('pt-MZ')}</div>
+        <div class="prod-badges">
+          ${produto.condicao ? `<span class="badge badge-cond">${cond[produto.condicao]||produto.condicao}</span>` : ''}
+          <span class="badge badge-cat">📦 ${produto.categoria||'Geral'}</span>
+          ${produto.tipo_preco === 'negociavel' ? '<span class="badge badge-negoc">💬 Negociável</span>' : ''}
+        </div>
+        <div class="prod-local">📍 ${produto.local || 'Moçambique'}</div>
+        <div class="estrelas-row">
+          <div class="estrelas-grandes">${estrelas}</div>
+          <div class="avaliacao-info">
+            <strong>${avaliacao}</strong>/5 · ${produto.total_avaliacoes||0} avaliações
+          </div>
+          <button onclick="abrirAvaliacao(0)" style="background:none;border:none;color:var(--azul);cursor:pointer;font-size:13px;font-weight:600;margin-left:8px">Avaliar</button>
+        </div>
+        <hr class="divider">
+        <div class="prod-desc">${(produto.descricao||'').replace(/\n/g,'<br>')}</div>
+        <div class="detalhes-grid">
+          <div class="detalhe-item">
+            <div class="detalhe-label">Condição</div>
+            <div class="detalhe-val">${cond[produto.condicao] || 'N/D'}</div>
+          </div>
+          <div class="detalhe-item">
+            <div class="detalhe-label">Tipo de Preço</div>
+            <div class="detalhe-val">${produto.tipo_preco || 'Fixo'}</div>
+          </div>
+          <div class="detalhe-item">
+            <div class="detalhe-label">Localização</div>
+            <div class="detalhe-val">${produto.local || 'N/D'}</div>
+          </div>
+          <div class="detalhe-item">
+            <div class="detalhe-label">Publicado em</div>
+            <div class="detalhe-val">${produto.criado_em ? new Date(produto.criado_em).toLocaleDateString('pt-MZ') : 'Recentemente'}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Avaliações -->
+      <div class="detalhes-card" style="margin-top:16px">
+        <div style="font-size:17px;font-weight:700;margin-bottom:12px">⭐ Avaliações</div>
+        <div class="avaliacoes-lista" id="avaliacoesList">
+          <!-- Avaliações carregadas via JS -->
+          <div style="text-align:center;padding:24px;color:var(--texto-sec)">
+            <p>Ainda não há avaliações. Seja o primeiro a avaliar!</p>
+            <button onclick="abrirAvaliacao(0)" style="color:var(--azul);background:none;border:none;cursor:pointer;font-weight:600;margin-top:8px">Escrever avaliação</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DIREITA: Painel de compra -->
+    <div class="painel">
+      <!-- Ações -->
+      <div class="card">
+        <div style="font-size:13px;color:var(--texto-sec);margin-bottom:12px">💡 Produto verificado pelo Luvano</div>
+        <button class="btn-comprar" onclick="comprar()">🛒 Comprar Agora</button>
+        <button class="btn-whatsapp" onclick="abrirWhatsApp('${tel}','${produto.nome.replace(/'/g,'')}',${produto.preco})">
+          <svg width="20" height="20" fill="white" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.558 4.118 1.534 5.848L.058 24l6.305-1.654A11.93 11.93 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.891 0-3.659-.506-5.181-1.388l-.371-.22-3.745.982.999-3.652-.24-.38A9.938 9.938 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+          Contactar via WhatsApp
+        </button>
+        <button class="btn-favoritar ${favoritado?'favoritado':''}" id="btnFav" onclick="toggleFavorito()">
+          ${favoritado?'❤️':'🤍'} ${favoritado?'Favoritado':'Adicionar aos Favoritos'}
+        </button>
+      </div>
+
+      <!-- Vendedor -->
+      <div class="card">
+        <div style="font-size:15px;font-weight:700;margin-bottom:12px">👤 Vendedor</div>
+        <div class="vendedor-info">
+          <div class="vendedor-avatar">
+            ${vendedor.avatar ? `<img src="${vendedor.avatar}" alt="${vendedor.nome}" />` : '👤'}
+          </div>
+          <div>
+            <div class="vendedor-nome">${vendedor.nome || 'Vendedor Luvano'}</div>
+            <div class="vendedor-member">Membro desde ${vendedor.criado_em ? new Date(vendedor.criado_em).getFullYear() : '2024'}</div>
+          </div>
+        </div>
+        <div style="margin-top:12px; display:flex; gap:8px">
+          <a href="vendedor.html?id=${produto.vendedor_id}" class="btn-ver-perfil" style="flex:1;text-align:center;padding:8px;border:1.5px solid var(--cinza-borda);border-radius:8px;text-decoration:none">Ver Perfil</a>
+          <button onclick="abrirChat()" style="flex:1;background:var(--azul-light);color:var(--azul);border:none;border-radius:8px;padding:8px;font-weight:600;cursor:pointer">💬 Chat</button>
+        </div>
+      </div>
+
+      <!-- Segurança -->
+      <div class="card" style="background:linear-gradient(135deg,#e8f5e9,#f0fff4)">
+        <div style="font-size:14px;font-weight:700;color:#2e7d32;margin-bottom:8px">🔒 Compra Segura</div>
+        <div style="font-size:13px;color:#388e3c;line-height:1.6">
+          ✅ Pagamento via M-Pesa, E-Mola ou mKesh<br>
+          ✅ Referência única para cada transação<br>
+          ✅ Suporte ao comprador garantido<br>
+          ✅ Histórico de compras disponível
+        </div>
+      </div>
+    </div>
+  `;
+
+  carregarAvaliacoes();
+}
+
+// Navegação galeria
+function irFoto(idx) {
+  fotoAtual = idx;
+  document.getElementById('fotoPrincipal').src = fotos[idx];
+  document.getElementById('fotoCounter').textContent = fotos.length > 1 ? `${idx+1}/${fotos.length}` : '';
+  document.querySelectorAll('.miniatura').forEach((m, i) => m.classList.toggle('ativa', i === idx));
+}
+
+function navFoto(dir) {
+  fotoAtual = (fotoAtual + dir + fotos.length) % fotos.length;
+  irFoto(fotoAtual);
+}
+
+// Lightbox
+function abrirLightbox(idx) {
+  fotoAtual = idx;
+  document.getElementById('lightboxImg').src = fotos[idx];
+  document.getElementById('lightbox').classList.add('show');
+}
+
+function fecharLightbox(e) {
+  if (!e || e.target === document.getElementById('lightbox') || e.currentTarget.classList.contains('lightbox-close')) {
+    document.getElementById('lightbox').classList.remove('show');
+  }
+}
+
+function navLightbox(dir) {
+  fotoAtual = (fotoAtual + dir + fotos.length) % fotos.length;
+  document.getElementById('lightboxImg').src = fotos[fotoAtual];
+}
+
+// Comprar
+function comprar() {
+  if (!usuarioLogado) {
+    mostrarToast('Faça login para comprar produtos');
+    setTimeout(() => window.location.href = `login.html?next=produto.html?id=${produtoId}`, 1500);
+    return;
+  }
+  window.location.href = `pagamento.html?produto=${produto.id}`;
+}
+
+// WhatsApp
+function abrirWhatsApp(tel, nome, preco) {
+  const msg = encodeURIComponent(`Olá! Vi o produto "${nome}" por MT ${Number(preco).toLocaleString('pt-MZ')} no Luvano. Ainda está disponível?`);
+  window.open(`https://wa.me/${tel}?text=${msg}`, '_blank');
+}
+
+// Favoritar
+async function toggleFavorito() {
+  if (!usuarioLogado) { mostrarToast('Faça login para favoritar'); return; }
+  const btn = document.getElementById('btnFav');
+  if (favoritado) {
+    await sb.from('favoritos').delete().eq('usuario_id', usuarioLogado.id).eq('produto_id', produto.id);
+    favoritado = false;
+    btn.innerHTML = '🤍 Adicionar aos Favoritos';
+    btn.classList.remove('favoritado');
+    mostrarToast('Removido dos favoritos');
+  } else {
+    await sb.from('favoritos').insert({ usuario_id: usuarioLogado.id, produto_id: produto.id });
+    favoritado = true;
+    btn.innerHTML = '❤️ Favoritado';
+    btn.classList.add('favoritado');
+    mostrarToast('Adicionado aos favoritos! ❤️', 'sucesso');
+  }
+}
+
+// Chat interno
+function abrirChat() {
+  if (!usuarioLogado) { mostrarToast('Faça login para enviar mensagens'); return; }
+  window.location.href = `chat.html?vendedor=${produto.vendedor_id}&produto=${produto.id}`;
+}
+
+// Avaliação
+function abrirAvaliacao(nota) {
+  if (!usuarioLogado) { mostrarToast('Faça login para avaliar'); return; }
+  if (nota > 0) selecionarEstrela(nota);
+  document.getElementById('modalAval').classList.add('show');
+}
+
+function selecionarEstrela(v) {
+  avaliacaoSelecionada = v;
+  document.querySelectorAll('.estrela-m').forEach((e, i) => {
+    e.textContent = i < v ? '★' : '☆';
+    e.style.color = i < v ? '#f4af00' : '#ccc';
+  });
+}
+
+async function enviarAvaliacao() {
+  if (avaliacaoSelecionada === 0) { mostrarToast('Selecione pelo menos 1 estrela', 'erro'); return; }
+  const texto = document.getElementById('textAval').value.trim();
+
+  const { error } = await sb.from('avaliacoes').insert({
+    produto_id: produto.id,
+    usuario_id: usuarioLogado.id,
+    nota: avaliacaoSelecionada,
+    texto,
+    criado_em: new Date().toISOString()
+  });
+
+  if (error) {
+    if (error.code === '23505') mostrarToast('Já avaliou este produto', 'erro');
+    else mostrarToast('Erro ao enviar avaliação', 'erro');
+    return;
+  }
+
+  // Recalcular média
+  const { data: avs } = await sb.from('avaliacoes').select('nota').eq('produto_id', produto.id);
+  if (avs) {
+    const media = avs.reduce((s, a) => s + a.nota, 0) / avs.length;
+    await sb.from('produtos').update({ avaliacao: media.toFixed(1), total_avaliacoes: avs.length }).eq('id', produto.id);
+  }
+
+  document.getElementById('modalAval').classList.remove('show');
+  mostrarToast('Avaliação enviada! Obrigado ⭐', 'sucesso');
+  setTimeout(() => location.reload(), 1500);
+}
+
+// Carregar avaliações
+async function carregarAvaliacoes() {
+  const { data } = await sb.from('avaliacoes').select('*, users(nome)').eq('produto_id', produto.id).order('criado_em', { ascending: false }).limit(5);
+  if (!data || data.length === 0) return;
+  const lista = document.getElementById('avaliacoesList');
+  lista.innerHTML = data.map(a => `
+    <div class="avaliacao-item">
+      <div class="av-header">
+        <span class="av-user">${a.users?.nome || 'Utilizador'}</span>
+        <span class="av-stars">${'★'.repeat(a.nota)}${'☆'.repeat(5-a.nota)}</span>
+        <span class="av-data">${new Date(a.criado_em).toLocaleDateString('pt-MZ')}</span>
+      </div>
+      ${a.texto ? `<div class="av-texto">${a.texto}</div>` : ''}
+    </div>`).join('');
+}
+
+function mostrarToast(msg, tipo='info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = tipo==='erro'?'#c62828':tipo==='sucesso'?'#2e7d32':'#323232';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js")
+      .then(r => console.log("[Luvano SW] Registado:", r.scope))
+      .catch(e => console.warn("[Luvano SW] Erro:", e));
+  });
+}
+</script>
+</body>
+</html>

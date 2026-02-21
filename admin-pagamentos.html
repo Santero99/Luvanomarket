@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pt-MZ">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pagamentos - Admin Luvano</title>
+  <link rel="manifest" href="manifest.json"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root{--azul:#1877f2;--azul-light:#e7f0ff;--cinza-bg:#f0f2f5;--cinza-borda:#dde1e7;--texto:#1c1e21;--texto-sec:#65676b;--verde:#2e7d32;--vermelho:#e41e3f;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--cinza-bg);}
+    header{background:var(--azul);padding:0 20px;height:60px;display:flex;align-items:center;justify-content:space-between;}
+    header a.logo{color:#fff;font-size:20px;font-weight:800;text-decoration:none;}
+    .nav{display:flex;gap:8px;}
+    .nav a{color:rgba(255,255,255,.85);text-decoration:none;font-size:13px;padding:6px 12px;border-radius:6px;background:rgba(255,255,255,.15);}
+    .container{max-width:1100px;margin:0 auto;padding:24px 16px;}
+    .tabs{display:flex;gap:4px;margin-bottom:20px;background:#fff;border-radius:10px;padding:4px;box-shadow:0 1px 4px rgba(0,0,0,.07);}
+    .tab{flex:1;padding:10px;border:none;background:none;cursor:pointer;font-size:14px;font-weight:600;color:var(--texto-sec);border-radius:8px;transition:all .2s;}
+    .tab.ativo{background:var(--azul);color:#fff;}
+    .busca-bar{display:flex;gap:10px;margin-bottom:16px;}
+    .busca-bar input{flex:1;padding:10px 14px;border:2px solid var(--cinza-borda);border-radius:10px;font-size:14px;outline:none;}
+    .busca-bar input:focus{border-color:var(--azul);}
+    .card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.08);overflow:hidden;}
+    table{width:100%;border-collapse:collapse;font-size:13px;}
+    th{text-align:left;padding:12px 14px;color:var(--texto-sec);font-weight:600;border-bottom:2px solid var(--cinza-borda);background:#f8fafc;}
+    td{padding:11px 14px;border-bottom:1px solid var(--cinza-borda);}
+    tr:last-child td{border-bottom:none;}
+    tr:hover td{background:#f8fafc;}
+    .badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+    .b-ok{background:#e8f5e9;color:var(--verde);}
+    .b-pend{background:#fff3e0;color:#ef6c00;}
+    .b-rej{background:#ffebee;color:var(--vermelho);}
+    .btn-sm{padding:5px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;margin-right:4px;}
+    .btn-ok{background:#e8f5e9;color:var(--verde);}
+    .btn-rej{background:#ffebee;color:var(--vermelho);}
+    .ref-code{font-family:monospace;font-size:12px;background:var(--cinza-bg);padding:2px 8px;border-radius:4px;}
+    .summary-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+    @media(max-width:600px){.summary-cards{grid-template-columns:1fr;}}
+    .sum-card{background:#fff;border-radius:10px;box-shadow:0 1px 6px rgba(0,0,0,.07);padding:16px;}
+    .sum-val{font-size:22px;font-weight:900;color:var(--azul);margin-bottom:3px;}
+    .sum-lbl{font-size:12px;color:var(--texto-sec);}
+    #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:#323232;color:#fff;padding:12px 24px;border-radius:30px;font-size:14px;z-index:9999;transition:transform .3s;}
+    #toast.show{transform:translateX(-50%) translateY(0);}
+  </style>
+</head>
+<body>
+<header>
+  <a class="logo" href="admin.html">🛍️ Luvano Admin</a>
+  <div class="nav">
+    <a href="admin.html">📊 Dashboard</a>
+    <a href="admin-usuarios.html">👥 Utilizadores</a>
+    <a href="admin-produtos.html">📦 Produtos</a>
+  </div>
+</header>
+<div class="container">
+  <h1 style="font-size:22px;font-weight:800;margin-bottom:20px;">💳 Gestão de Pagamentos</h1>
+  <div class="summary-cards">
+    <div class="sum-card"><div class="sum-val" id="sTotal">-</div><div class="sum-lbl">💰 Total Processado</div></div>
+    <div class="sum-card"><div class="sum-val" id="sComissao">-</div><div class="sum-lbl">🏦 Comissão da Plataforma</div></div>
+    <div class="sum-card"><div class="sum-val" id="sPendLev">-</div><div class="sum-lbl">💸 Levantamentos Pendentes</div></div>
+  </div>
+  <div class="tabs">
+    <button class="tab ativo" onclick="mostrarTab('pagamentos',this)">💳 Pagamentos</button>
+    <button class="tab" onclick="mostrarTab('levantamentos',this)">💸 Levantamentos</button>
+  </div>
+  <div class="busca-bar">
+    <input type="text" id="busca" placeholder="🔍 Pesquisar por referência, utilizador..." oninput="filtrar()"/>
+  </div>
+  <div class="card" id="tabela"><div style="text-align:center;padding:32px;color:var(--texto-sec)">A carregar...</div></div>
+</div>
+<div id="toast"></div>
+<script>
+const SUPABASE_URL='https://SEU_PROJETO.supabase.co';
+const SUPABASE_ANON_KEY='SUA_ANON_KEY_AQUI';
+const {createClient}=supabase;
+const sb=createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let tabAtual='pagamentos',todosPag=[],todosLev=[];
+const DEMO_PAG=[
+  {id:1,referencia:'LVNABC123',metodo:'mpesa',valor:65000,comissao:1950,status:'confirmado',criado_em:new Date().toISOString(),users:{nome:'Pedro Matos'},produtos:{nome:'iPhone 14 Pro'}},
+  {id:2,referencia:'LVNDEF456',metodo:'emola',valor:18500,comissao:555,status:'pendente',criado_em:new Date(Date.now()-3600000).toISOString(),users:{nome:'Ana Tembe'},produtos:{nome:'Sofá 3 Lugares'}},
+];
+const DEMO_LEV=[
+  {id:1,metodo:'mpesa',numero:'258841234567',valor:5000,status:'pendente',data:new Date().toISOString(),users:{nome:'João Silva'}},
+  {id:2,metodo:'emola',numero:'258844567890',valor:12000,status:'confirmado',data:new Date(Date.now()-86400000).toISOString(),users:{nome:'Maria Cumbe'}},
+];
+
+document.addEventListener('DOMContentLoaded',async()=>{
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){window.location.href='login.html';return;}
+  await carregarTudo();
+});
+
+async function carregarTudo(){
+  const [{data:pags},{data:levs}]=await Promise.all([
+    sb.from('pagamentos').select('*,users(nome),produtos(nome)').order('criado_em',{ascending:false}),
+    sb.from('levantamentos').select('*,users(nome)').order('data',{ascending:false}),
+  ]);
+  todosPag=(pags&&pags.length)?pags:DEMO_PAG;
+  todosLev=(levs&&levs.length)?levs:DEMO_LEV;
+  const tv=todosPag.filter(p=>p.status==='confirmado').reduce((s,p)=>s+(p.valor||0),0);
+  const tc=todosPag.reduce((s,p)=>s+(p.comissao||0),0);
+  const tl=todosLev.filter(l=>l.status==='pendente').length;
+  document.getElementById('sTotal').textContent=`MT ${Number(tv).toLocaleString('pt-MZ')}`;
+  document.getElementById('sComissao').textContent=`MT ${Number(tc).toLocaleString('pt-MZ')}`;
+  document.getElementById('sPendLev').textContent=tl;
+  renderizarPag(todosPag);
+}
+
+function renderizarPag(lista){
+  const el=document.getElementById('tabela');
+  el.innerHTML=`<table>
+    <thead><tr><th>Referência</th><th>Comprador</th><th>Produto</th><th>Método</th><th>Valor</th><th>Comissão</th><th>Estado</th></tr></thead>
+    <tbody>${lista.map(p=>`<tr>
+      <td><span class="ref-code">${p.referencia||p.id}</span></td>
+      <td>${p.users?.nome||'-'}</td>
+      <td>${p.produtos?.nome||'-'}</td>
+      <td>${(p.metodo||'').toUpperCase()}</td>
+      <td><strong>MT ${Number(p.valor||0).toLocaleString('pt-MZ')}</strong></td>
+      <td style="color:var(--verde)">MT ${Number(p.comissao||0).toLocaleString('pt-MZ')}</td>
+      <td><span class="badge ${p.status==='confirmado'?'b-ok':'b-pend'}">${p.status==='confirmado'?'✅ Confirmado':'⏳ Pendente'}</span></td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function renderizarLev(lista){
+  const el=document.getElementById('tabela');
+  el.innerHTML=`<table>
+    <thead><tr><th>Utilizador</th><th>Método</th><th>Número</th><th>Valor</th><th>Data</th><th>Estado</th><th>Acção</th></tr></thead>
+    <tbody>${lista.map(l=>`<tr>
+      <td><strong>${l.users?.nome||'-'}</strong></td>
+      <td>${(l.metodo||'').toUpperCase()}</td>
+      <td>${l.numero||'-'}</td>
+      <td><strong>MT ${Number(l.valor||0).toLocaleString('pt-MZ')}</strong></td>
+      <td>${l.data?new Date(l.data).toLocaleDateString('pt-MZ'):'-'}</td>
+      <td><span class="badge ${l.status==='confirmado'?'b-ok':l.status==='rejeitado'?'b-rej':'b-pend'}">${l.status==='confirmado'?'✅':l.status==='rejeitado'?'❌':'⏳'} ${l.status}</span></td>
+      <td>${l.status==='pendente'?`<button class="btn-sm btn-ok" onclick="aprovar(${l.id})">✅ Aprovar</button><button class="btn-sm btn-rej" onclick="rejeitar(${l.id})">❌</button>`:'—'}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function mostrarTab(tab,el){
+  tabAtual=tab;
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('ativo'));
+  el.classList.add('ativo');
+  if(tab==='pagamentos')renderizarPag(todosPag);else renderizarLev(todosLev);
+}
+
+function filtrar(){
+  const q=document.getElementById('busca').value.toLowerCase();
+  if(tabAtual==='pagamentos')renderizarPag(todosPag.filter(p=>(p.referencia||'').toLowerCase().includes(q)||(p.users?.nome||'').toLowerCase().includes(q)));
+  else renderizarLev(todosLev.filter(l=>(l.users?.nome||'').toLowerCase().includes(q)||(l.numero||'').includes(q)));
+}
+
+async function aprovar(id){
+  if(!confirm('Aprovar este levantamento?'))return;
+  await sb.from('levantamentos').update({status:'confirmado'}).eq('id',id);
+  mostrarToast('Levantamento aprovado! ✅','sucesso');
+  await carregarTudo();
+}
+
+async function rejeitar(id){
+  if(!confirm('Rejeitar este levantamento?'))return;
+  const {data:lev}=await sb.from('levantamentos').select('*').eq('id',id).single();
+  if(lev){const {data:c}=await sb.from('carteira').select('saldo').eq('usuario_id',lev.usuario_id).single();if(c)await sb.from('carteira').update({saldo:c.saldo+lev.valor}).eq('usuario_id',lev.usuario_id);}
+  await sb.from('levantamentos').update({status:'rejeitado'}).eq('id',id);
+  mostrarToast('Levantamento rejeitado. Saldo devolvido.','sucesso');
+  await carregarTudo();
+}
+
+function mostrarToast(msg,tipo='info'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.style.background=tipo==='erro'?'#c62828':tipo==='sucesso'?'#2e7d32':'#323232';
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);
+}
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js")
+      .then(r => console.log("[Luvano SW] Registado:", r.scope))
+      .catch(e => console.warn("[Luvano SW] Erro:", e));
+  });
+}
+</script>
+</body>
+</html>

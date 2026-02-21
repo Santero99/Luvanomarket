@@ -1,0 +1,61 @@
+{
+  "name": "Luvano - Marketplace de Moçambique",
+  "short_name": "Luvano",
+  "description": "O maior marketplace digital de Moçambique. Compre e venda com M-Pesa, E-Mola, mKesh e Cartão.",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#f0f2f5",
+  "theme_color": "#1877f2",
+  "orientation": "portrait-primary",
+  "lang": "pt-MZ",
+  "categories": ["shopping", "lifestyle"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='40' fill='%231877f2'/><text y='140' x='96' text-anchor='middle' font-size='120'>🛍️</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='80' fill='%231877f2'/><text y='380' x='256' text-anchor='middle' font-size='320'>🛍️</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=390&h=844&q=80",
+      "sizes": "390x844",
+      "type": "image/jpeg",
+      "label": "Feed de Produtos Luvano"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Publicar Produto",
+      "short_name": "Publicar",
+      "description": "Publique um novo produto",
+      "url": "/publicar.html",
+      "icons": [{"src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><text y='.9em' font-size='90'>➕</text></svg>", "sizes": "96x96"}]
+    },
+    {
+      "name": "Minhas Compras",
+      "short_name": "Compras",
+      "description": "Ver histórico de compras",
+      "url": "/compras.html",
+      "icons": [{"src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><text y='.9em' font-size='90'>📦</text></svg>", "sizes": "96x96"}]
+    },
+    {
+      "name": "Favoritos",
+      "short_name": "Favoritos",
+      "description": "Produtos favoritos",
+      "url": "/favoritos.html",
+      "icons": [{"src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><text y='.9em' font-size='90'>❤️</text></svg>", "sizes": "96x96"}]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "scope": "/",
+  "id": "luvano-marketplace-mz"
+}
